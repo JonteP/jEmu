@@ -10,7 +10,7 @@
 #define WPOSY 100
 #define FRAMETIME 16639261 /*60.098823055*/
 
-void init_time(void), write_ppu_register(uint_fast16_t, uint_fast8_t), draw_nametable(), draw_pattern(), draw_palette();
+void write_ppu_register(uint_fast16_t, uint_fast8_t), draw_nametable(), draw_pattern(), draw_palette();
 uint_fast8_t read_ppu_register(uint_fast16_t), ppu_read(uint_fast16_t);
 void run_ppu(uint_fast16_t);
 

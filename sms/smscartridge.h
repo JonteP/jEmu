@@ -29,7 +29,8 @@ Mapper mapper;
 extern struct RomFile cartRom, *currentRom;
 
 struct RomFile load_rom(char *);
-void init_slots(), close_rom(), memory_control(uint8_t);
+int init_slots();
+void close_rom(), memory_control(uint8_t);
 uint8_t * (*read_bank0)(uint16_t),
 		* (*read_bank1)(uint16_t),
 		* (*read_bank2)(uint16_t),

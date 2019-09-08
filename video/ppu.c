@@ -3,20 +3,19 @@
 #include <stdint.h>
 #include <time.h> 	/* clock */
 #include <unistd.h> /* usleep */
-#include "globals.h"
-#include "apu.h"
-#include "mapper.h"
-#include "my_sdl.h"
-#include "6502.h"
-#include "cartridge.h"
+#include "../nes/globals.h"
+#include "../audio/apu.h"
+#include "../nes/mapper.h"
+#include "../my_sdl.h"
+#include "../cpu/6502.h"
+#include "../nes/nescartridge.h"
 
 static inline void check_nmi(), horizontal_t_to_v(), vertical_t_to_v(), ppu_render(), reload_tile_shifter(), toggle_a12(uint_fast16_t), ppuwrite(uint_fast16_t, uint_fast8_t);
 static inline uint_fast8_t * ppuread(uint_fast16_t);
 
 uint_fast8_t *chrSlot[0x8], *nameSlot[0x4], oam[0x100], frameBuffer[SHEIGHT][SWIDTH], nameBuffer[SHEIGHT<<1][SWIDTH<<1], patternBuffer[SWIDTH>>1][SWIDTH], paletteBuffer[SWIDTH>>4][SWIDTH>>1];
 uint_fast8_t ppuOamAddress;
-uint_fast8_t throttle = 1;
-int16_t ppudot = 0, vCounter = 0;
+int16_t ppudot = 0, ppu_vCounter = 0;
 uint_fast8_t ciram[0x800], palette[0x20];
 static uint_fast8_t vblank_period = 0, nmiSuppressed = 0, secOam[0x20];
 
@@ -96,22 +95,22 @@ void run_ppu (uint_fast16_t ntimes) {
 
 		if (ppudot == 341)
 		{
-		vCounter++;
+		ppu_vCounter++;
 		ppudot = 0;
 		}
-		if (vCounter == 262)
+		if (ppu_vCounter == 262)
 		{
-		vCounter = 0;
+		ppu_vCounter = 0;
 		frame++;
 		}
 
 /* VBLANK ONSET */
-	if (vCounter == 241 && ppudot == 1) {
+	if (ppu_vCounter == 241 && ppudot == 1) {
 		ppuStatusNmi = 1; /* set vblank */
 		vblank_period = 1;
 
 /* PRERENDER SCANLINE */
-	} else if (vCounter == 261) {
+	} else if (ppu_vCounter == 261) {
 		if (ppuMask & 0x18)
 		{
 			(*fetchGraphics[ppudot])();
@@ -146,13 +145,13 @@ void run_ppu (uint_fast16_t ntimes) {
 		}
 
 /* RESET CLOCK COUNTER HERE... */
-	} else if (vCounter == 240 && ppudot == 0) {
+	} else if (ppu_vCounter == 240 && ppudot == 0) {
 		ppucc = 0;
 
 /* RENDERED LINES */
-	} else if (vCounter < 240)
+	} else if (ppu_vCounter < 240)
 	{
-		if (!vCounter && !ppudot)
+		if (!ppu_vCounter && !ppudot)
 			render_frame();
 		if (ppuMask & 0x18)
 		{
@@ -196,7 +195,7 @@ void seRR ()
 		ppuOamAddress = 0;
 	}
 	data = oam[(nSprite1 << 2) + nData]; /* read y coordinate */
-	if (!nData && !(data <= vCounter && vCounter <= (data + 7 + ( (ppuController >> 2) & 0x08)))) /* not within range */
+	if (!nData && !(data <= ppu_vCounter && ppu_vCounter <= (data + 7 + ( (ppuController >> 2) & 0x08)))) /* not within range */
 	{
 		nSprite1++;
 		ppuOamAddress += 4;
@@ -279,7 +278,7 @@ void sfLT ()
 {
 	cSprite = ((ppudot >> 3) & 0x07);
 	sprite = secOam + (cSprite << 2);
-	yOffset = vCounter - (sprite[0]);
+	yOffset = ppu_vCounter - (sprite[0]);
 	flipY = ((sprite[2] >> 7) & 1);
 	spriteRow = (yOffset & 7) + flipY * (7 - ((yOffset & 7) << 1));
 	if (ppuController & 0x20) /* 8x16 sprites */
@@ -384,25 +383,25 @@ void ppu_render()
 		uint_fast8_t bgColor = (!(ppuMask & 0x18) && (ppuV & 0x3f00) == 0x3f00) ? *ppuread(ppuV & 0x3fff) : *ppuread(0x3f00);
 		uint_fast8_t isSprite = (spriteBuffer[cDot]!=0xff && (ppuMask & 0x10) && ((cDot > 7) || (ppuMask & 0x04)));
 		uint_fast8_t isBg = ((pValue & 0x03) && (ppuMask & 0x08) && ((cDot > 7) || (ppuMask & 0x02)));
-		if (vCounter < 240)
+		if (ppu_vCounter < 240)
 		{
 			if (isSprite && isBg)
 			{
 				if (!ppuStatusSpriteZero && zeroBuffer[cDot] && cDot<255)
 				{
 					ppuStatusSpriteZero = 1;
-					frameBuffer[vCounter][cDot] = 0x10;
+					frameBuffer[ppu_vCounter][cDot] = 0x10;
 				}
-				frameBuffer[vCounter][cDot] = priorityBuffer[cDot] ?  *ppuread(0x3f00 + pValue) : spriteBuffer[cDot];
+				frameBuffer[ppu_vCounter][cDot] = priorityBuffer[cDot] ?  *ppuread(0x3f00 + pValue) : spriteBuffer[cDot];
 			}
 			else if (isSprite && !isBg)
 			{
-				frameBuffer[vCounter][cDot] = spriteBuffer[cDot];
+				frameBuffer[ppu_vCounter][cDot] = spriteBuffer[cDot];
 			}
 			else if (isBg && !isSprite)
-				frameBuffer[vCounter][cDot] = *ppuread(0x3f00 + pValue);
+				frameBuffer[ppu_vCounter][cDot] = *ppuread(0x3f00 + pValue);
 			else
-				frameBuffer[vCounter][cDot] = bgColor;
+				frameBuffer[ppu_vCounter][cDot] = bgColor;
 			}
 			tileShifterHigh = (tileShifterHigh << 1);
 			tileShifterLow = (tileShifterLow << 1);

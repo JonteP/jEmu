@@ -9,7 +9,7 @@
 #define SMSEMU_H_
 #include <stdint.h>
 #include <linux/limits.h>
-#include "vdp.h"
+#include "../video/vdp.h"
 
 // CLOCKS AND DIVIDERS
 #define NTSC_MASTER			53693175

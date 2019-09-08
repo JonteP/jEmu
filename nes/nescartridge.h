@@ -33,6 +33,6 @@ extern gameFeatures cart;
 extern int psize, csize;
 extern uint_fast8_t *prg, *chrRom, *chrRam, *bwram, *wram, *wramSource, mirroring[4][4], wramEnable;
 
-void load_rom(), close_rom();
+void nes_load_rom(), nes_close_rom();
 
 #endif /* CARTRIDGE_H_ */

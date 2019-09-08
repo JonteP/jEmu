@@ -1,12 +1,13 @@
 #include "smsemu.h"
 #include <stdio.h>
 #include <stdint.h>
-#include "cartridge.h"
 #include "../cpu/z80.h"
-#include "my_sdl.h"
-#include "vdp.h"
-#include "sn79489.h"
-#include "ym2413.h"
+#include "../my_sdl.h"
+#include "../video/vdp.h"
+#include "../audio/sn79489.h"
+#include "../audio/ym2413.h"
+#include "smscartridge.h"
+#include "../jemu.h"
 
 /* Compatibility:
  * zool - hangs at game start (interrupts?) discussion here: http://www.smspower.org/forums/9366-IRQAndIperiodNightmare
@@ -26,12 +27,11 @@
  */
 static inline void init_video(void), init_audio(void);
 char cartFile[PATH_MAX], cardFile[PATH_MAX], expFile[PATH_MAX], biosFile[PATH_MAX];
-uint8_t quit = 0, ioPort1, ioPort2, ioControl, region, reset = 0;
+uint8_t ioPort1, ioPort2, ioControl, region, reset = 0, failure = 0;
 uint8_t sms_read_z80_register(uint8_t), * sms_read_z80_memory(uint16_t);
 void sms_write_z80_register(uint8_t, uint8_t), sms_write_z80_memory(uint16_t, uint8_t), sms_addcycles(uint8_t), sms_synchronize(int);
 struct machine ntsc_us={"mpr-10052.ic2",NTSC_MASTER,NTSC,EXPORT,VDP_1}, pal1={"mpr-10052.ic2",PAL_MASTER,PAL,EXPORT,VDP_1}, pal2={"mpr-12808.ic2",PAL_MASTER,PAL,EXPORT,VDP_2}, ntsc_jp={"mpr-11124.ic2",NTSC_MASTER,NTSC,JAPAN,VDP_1}, *currentMachine;
 int vdpCyclesToRun = 0;
-sdlSettings settings;
 FILE *logfile;
 
 int smsemu(){
@@ -47,13 +47,14 @@ int smsemu(){
 	read_z80_register = &sms_read_z80_register;
 	write_z80_register = &sms_write_z80_register;
 	addcycles = &sms_addcycles;
-	synchronize = &sms_synchronize;
+	z80_synchronize = &sms_synchronize;
 
 	strcpy(cartFile, "/home/jonas/Desktop/sms/unsorted/Other/Sonic The Hedgehog (FM v1.02).sms");
 	currentMachine = &ntsc_jp;
-	init_sdl(&settings);
-	reset_emulation();
 
+	reset_emulation();
+	if(failure)
+		return 1;
 	while (quit == 0){
 		run_z80();
 		if(reset){
@@ -62,7 +63,6 @@ int smsemu(){
 		}
 	}
 	fclose(logfile);
-	close_sdl();
 	close_rom();
 	close_vdp();
 	close_sn79489();
@@ -74,7 +74,8 @@ void reset_emulation(){
 	init_video();
 	init_audio();
 	sprintf(biosFile, "bios/%s",currentMachine->bios);
-	init_slots();
+	if(init_slots())
+			failure = 1;
 	power_reset();
 	set_timings(1);
 }
@@ -128,7 +129,6 @@ void machine_menu_option(int option){
 void init_video(){
 	default_video_mode();
 	settings.renderQuality = "1";
-	settings.ctable = smsColor;
 	settings.window.name = "smsEmu";
 	settings.window.screenHeight = currentMode->height;
 	settings.window.screenWidth = currentMode->width;
@@ -221,7 +221,7 @@ uint8_t sms_read_z80_register(uint8_t reg){
 		return read_vdp_data();
 	case 0x81: ;/* Read VDP Control Port */
 		uint8_t value = statusFlags;
-		statusFlags = controlFlag = lineInt = irqPulled = 0;
+		statusFlags = controlFlag = lineInt = z80_irqPulled = 0;
 		return value;
 	case 0xc0:
 		/* reads from F2 detects FM */

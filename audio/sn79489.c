@@ -20,8 +20,8 @@
 #include "sn79489.h"
 #include <stdio.h>
 #include <stdint.h>
-#include "my_sdl.h"
-#include "smsemu.h"
+#include "../my_sdl.h"
+#include "../sms/smsemu.h"
 float *sn79489_SampleBuffer, sn79489_Sample = 0;
 static uint32_t sampleRate, originalSampleRate;
 const float volume_table[16]={ .32767, .26028, .20675, .16422, .13045, .10362, .08231, .06568, //could be made integer?

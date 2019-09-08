@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>	/* memcpy */
-#include "globals.h"
-#include "ppu.h"
-#include "apu.h"
-#include "mapper.h"
-#include "cartridge.h"
+#include "../nes/globals.h"
+#include "../video/ppu.h"
+#include "../audio/apu.h"
+#include "../nes/mapper.h"
+#include "../nes/nescartridge.h"
 
 reset_t rstFlag;
 

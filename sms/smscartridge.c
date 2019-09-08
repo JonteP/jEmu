@@ -1,4 +1,5 @@
-#include "cartridge.h"
+#include "smscartridge.h"
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>	/* malloc; exit */
@@ -21,16 +22,20 @@ static inline void generic_mapper(), sega_mapper(), codemasters_mapper(), setup_
 static inline void extract_xml_data(xmlNode *,struct RomFile *), xml_hash_compare(xmlNode *,struct RomFile *), parse_xml_file(xmlNode *,struct RomFile *);
 uint8_t fcr[3], *bank[3], cartRam[CARTRAM_SIZE], memControl, bramReg = 0, returnValue[1]={0}, systemRam[RAM_SIZE], ioEnabled;
 struct RomFile cartRom, cardRom, biosRom, expRom, *currentRom;
-char *xmlFile = "sms.xml", *bName;
+char *xmlFile = "softlist/sms.xml", *bName;
 FILE *bFile;
 xmlDoc *smsXml;
 
-void init_slots(){
+int init_slots(){
 	if(!(smsXml = xmlReadFile(xmlFile, NULL, 0))){
 		fprintf(stderr,"Error: %s could not be opened.\n",xmlFile);
 		exit(1);}
 	free_rom();
 	biosRom = load_rom(biosFile);
+	if(biosRom.rom == NULL){
+		printf("The BIOS ROM was not found.\n");
+		return 1;
+	}
 	cartRom = load_rom(cartFile);
 	cardRom = load_rom(cardFile);
 	expRom  = load_rom(expFile);
@@ -45,6 +50,7 @@ void init_slots(){
 		fcr[1] = 1;
 		fcr[2] = 2;
 	}
+	return 0;
 }
 
 void memory_control(uint8_t value){ /* TODO: dependent on machine version: http://www.smspower.org/Development/Port3E */

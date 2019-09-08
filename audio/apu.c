@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "globals.h"
+#include "../nes/globals.h"
 #include "SDL.h"
-#include "6502.h"
-#include "my_sdl.h"
-#include "ppu.h"
-#include "mapper.h"
+#include "../cpu/6502.h"
+#include "../my_sdl.h"
+#include "../video/ppu.h"
+#include "../nes/mapper.h"
 						/* 	shifted up by 1 to work */
 static uint_fast16_t frameClock[5] = {7457, 14913, 22371, 29829, 37281};
 static uint_fast16_t frameReset[2] = {29830, 37282};
@@ -216,8 +216,8 @@ void run_apu(uint_fast16_t ntimes) { /* apu cycle times */
 				sampleBuffer[sampleCounter++] = ((pulseMixSample/tmpcnt) + (tndMixSample/tmpcnt) + (expSample/tmpcnt)) / 2;
 			else
 				sampleBuffer[sampleCounter++] = (pulseMixSample/tmpcnt) + (tndMixSample/tmpcnt);
-			if (sampleCounter == BUFFER_SIZE)
-				output_sound();
+			//if (sampleCounter == BUFFER_SIZE)
+				//output_sound();
 			pulseMixSample = 0;
 			tndMixSample = 0;
 			expSample = 0;

@@ -8,8 +8,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
-#include "my_sdl.h"
-#include"smsemu.h"
+#include "../my_sdl.h"
+#include"../sms/smsemu.h"
 
 #define FRAC_BITS				16
 #define INSTRUMENT_CHANNELS		6

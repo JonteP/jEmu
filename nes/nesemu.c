@@ -5,12 +5,12 @@
 #include <stdlib.h>	/* malloc; exit; free */
 #include <string.h>	/* memcpy */
 #include <unistd.h>
-#include "ppu.h"
-#include "apu.h"
-#include "6502.h"
-#include "cartridge.h"
-#include "my_sdl.h"
+#include "../video/ppu.h"
+#include "../audio/apu.h"
+#include "../cpu/6502.h"
+#include "../my_sdl.h"
 #include "mapper.h"
+#include "nescartridge.h"
 
 /* TODO:
  *
@@ -26,7 +26,7 @@
 
 const float originalFps = 60.098823055, originalCpuClock = 1789773, cyclesPerFrame = 29780.5;
 float fps, cpuClock;
-uint_fast8_t quit = 0, ctrb = 0, ctrb2 = 0, ctr1 = 0, ctr2 = 0;
+uint_fast8_t ctrb = 0, ctrb2 = 0, ctr1 = 0, ctr2 = 0;
 uint_fast8_t openBus;
 uint16_t vdp_wait = 0, apu_wait = 0;
 FILE *logfile;
@@ -41,15 +41,15 @@ int nesemu(int argc, char *argv[]) {
 		romName = "/home/jonas/games/nes/mappers/mmc3/rockman3.nes";
 	else
 		romName = argv[1];
-	load_rom(romName);
+	nes_load_rom(romName);
 
 	logfile = fopen("/home/jonas/eclipse-workspace/logfile.txt","w");
 	if (logfile==NULL)
 		printf("Error: Could not create logfile\n");
 
 	rstFlag = HARD_RESET;
-	init_sdl();
-	init_time();
+	//init_sdl();
+//	init_time();
 
 	while (quit == 0)
 	{
@@ -68,7 +68,7 @@ int nesemu(int argc, char *argv[]) {
 	}
 
 	fclose(logfile);
-	close_rom();
+	nes_close_rom();
 	close_sdl();
 }
 

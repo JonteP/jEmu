@@ -16,11 +16,11 @@
 #include <unistd.h> /* usleep */
 #include <dirent.h>
 #include <sys/stat.h>
-#include "smsemu.h"
-#include "sn79489.h"
-#include "ym2413.h"
-#include "../cpu/z80.h"
-#include "cartridge.h"
+#include "sms/smsemu.h"
+#include "audio/sn79489.h"
+#include "audio/ym2413.h"
+#include "cpu/z80.h"
+#include "sms/smscartridge.h"
 
 #define RENDER_FLAGS	(SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE)
 
@@ -47,7 +47,7 @@ SDL_DisplayMode mode;
 SDL_Rect SrcR, TrgR;
 
 static inline void render_window (windowHandle *, uint32_t *), idle_time(float), create_handle (windowHandle *), draw_menu(menuItem *), set_menu(void), get_menu_size(menuItem *, int, int), get_max_menu_size(menuItem *), create_menu(void), main_menu_option(int), clear_screen(SDL_Renderer *);
-static inline void option_fullscreen(void), option_quit(void), option_open_file(void), game_io(void), menu_io(void), file_io(void), get_parent_dir(char *), add_slash(char *), set_screen_size(windowHandle *handle);
+static inline void option_fullscreen(void), option_quit(void), option_open_file(void), game_io(void), menu_io(void), file_io(void), get_parent_dir(char *), add_slash(char *), set_screen_cropratio(windowHandle *handle);
 static inline float diff_time(struct timespec *, struct timespec *);
 static inline int is_directory(const char *), create_file_list(void), file_count(DIR *), fileSorter(const void *const, const void *const);
 static inline struct dirent ** read_directory(DIR *);
@@ -91,7 +91,7 @@ void init_sdl_video(){
 	if(!Sans){
 		printf("TTF_OpenFont failed: %s\n", TTF_GetError());
 		exit(EXIT_FAILURE);}
-	set_screen_size(&currentSettings->window);
+	set_screen_cropratio(&currentSettings->window);
 	create_menu();
 }
 
@@ -141,7 +141,7 @@ void close_sdl(){
 	SDL_Quit();
 }
 
-void set_screen_size(windowHandle *handle){
+void set_screen_cropratio(windowHandle *handle){
 	SrcR.x = handle->xClip;
 	SrcR.y = handle->yClip;
 	SrcR.w = handle->screenWidth - (handle->xClip << 1);
@@ -792,7 +792,7 @@ void game_io(){
 				ioPort1 &= ~IO1_PORTA_RIGHT;
 				break;
 			case SDL_SCANCODE_RETURN:
-				nmiPulled = 1;
+				z80_nmiPulled = 1;
 				break;
 			case SDL_SCANCODE_BACKSPACE:
 				ioPort2 &= ~IO2_RESET;

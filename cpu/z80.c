@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
-#include "smsemu.h"
+//#include "smsemu.h"
 
 #define S_SHIFT		7
 #define Z_SHIFT		6
@@ -210,7 +210,7 @@ static int8_t displace;//int since offset can be both positive and negative
 static uint8_t op, intDelay = 0, halted = 0;
 
 // Globals
-uint8_t irqPulled = 0, nmiPulled = 0;
+uint8_t z80_irqPulled = 0, z80_nmiPulled = 0;
 
 /* Internal registers */
 static uint16_t cpuAF, cpuAFx, cpuBC, cpuDE, cpuHL, cpuBCx, cpuDEx, cpuHLx;
@@ -250,7 +250,7 @@ static void (*optable[0x100])() = {
 	 retc,  pop,  jpc, exhl,callc, push, andi,  rst, retc, jphl,  jpc,   ex,callc,   ed, xori,  rst, /* e */
 	 retc,  pop,  jpc,   di,callc, push,  ori,  rst, retc,lsphl,  jpc,   ei,callc,   fd,  cpn,  rst, /* f */
 };
-if((irqPulled && iff1 && !intDelay) || nmiPulled){
+if((z80_irqPulled && iff1 && !intDelay) || z80_nmiPulled){
 		if(halted){
 			halted = 0;
 			cpuPC++;
@@ -258,17 +258,17 @@ if((irqPulled && iff1 && !intDelay) || nmiPulled){
 		/* TODO: this is assuming Mode 1 */
 		write_z80_memory(--cpuSP, ((cpuPC & 0xff00) >> 8));
 		write_z80_memory(--cpuSP, ( cpuPC & 0x00ff));
-		if (irqPulled){
+		if (z80_irqPulled){
 			iff1 = iff2 = 0;
 			addcycles(13);
-			irqPulled = 0;
+			z80_irqPulled = 0;
 			cpuPC = irq;
 		}
-		else if (nmiPulled){
+		else if (z80_nmiPulled){
 			iff2 = iff1;
 			iff1 = 0;
 			addcycles(11);
-			nmiPulled = 0;
+			z80_nmiPulled = 0;
 			cpuPC = nmi;
 		}
 	}
@@ -282,7 +282,7 @@ if((irqPulled && iff1 && !intDelay) || nmiPulled){
 		//	exit(1);
 		(*optable[op])();
 	}
-synchronize(0);
+z80_synchronize(0);
 }
 
 /* EXTENDED OPCODE TABLES */
@@ -1370,19 +1370,19 @@ void rst()	{ /* RST */
 /* INPUT AND OUTPUT GROUP */
 
 void in()	{ /* IN A,(n) */
-	synchronize(0);
+	z80_synchronize(0);
 	*cpuAreg = read_z80_register(*read_z80_memory(cpuPC++));
 }
 void inrc()	{ /* IN r,(C) */
 	uint8_t none; /* TODO: neater solution */
 	uint8_t *r[8] = {cpuBreg, cpuCreg, cpuDreg, cpuEreg, cpuHreg, cpuLreg, &none, cpuAreg};
-	synchronize(0);
+	z80_synchronize(0);
 	uint8_t tmp = read_z80_register(*cpuCreg);
 	*r[(op >> 3) & 7] = tmp;
 	*cpuFreg = ((*cpuFreg & YXC_FLAG) | (tmp & S_FLAG) | ((!tmp) << Z_SHIFT) | parcalc(tmp));
 }
 void ini()	{ /* INI */
-	synchronize(0);
+	z80_synchronize(0);
 	uint8_t tmp = read_z80_register(*cpuCreg);
 	write_z80_memory(*cpuHLreg, tmp);
 	(*cpuBreg)--; /* byte counter */
@@ -1391,7 +1391,7 @@ void ini()	{ /* INI */
 	*cpuFreg = ((*cpuFreg & YX_FLAG) | (*cpuBreg & S_FLAG) | ((!*cpuBreg) << Z_SHIFT) | ((k > 0xff) << H_SHIFT) | parcalc((k & 7) ^ *cpuBreg) | ((tmp & 0x80) >> 6) | (k > 0xff));
 }
 void inir()	{ /* INIR */
-	synchronize(0);
+	z80_synchronize(0);
 	uint8_t tmp = read_z80_register(*cpuCreg);
 	write_z80_memory(*cpuHLreg, tmp);
 (*cpuBreg)--; /* byte counter */
@@ -1404,18 +1404,18 @@ uint16_t k = (((*cpuCreg + 1) & 0xff) + tmp);
 *cpuFreg = ((*cpuFreg & YX_FLAG) | (*cpuBreg & S_FLAG) | ((!*cpuBreg) << Z_SHIFT) | ((k > 0xff) << H_SHIFT) | parcalc((k & 7) ^ *cpuBreg) | ((tmp & 0x80) >> 6) | (k > 0xff));
 }
 void out()	{ /* OUT (n),A */
-	synchronize(0);
+	z80_synchronize(0);
 	write_z80_register(*read_z80_memory(cpuPC++), *cpuAreg);
 }
 void outc()	{ /* OUT (C),r */
 	uint8_t *r[8] = {cpuBreg, cpuCreg, cpuDreg, cpuEreg, cpuHreg, cpuLreg, read_z80_memory(*cpuHLreg), cpuAreg};
-	synchronize(1);
+	z80_synchronize(1);
 	write_z80_register(*cpuCreg, *r[(op >> 3) & 7]);
 }
 void outi()	{ /* OUTI */
 	uint8_t tmp = *read_z80_memory(*cpuHLreg); /* to be written to port */
 	(*cpuBreg)--; /* byte counter */
-	synchronize(1);
+	z80_synchronize(1);
 	write_z80_register(*cpuCreg, tmp);
 	(*cpuHLreg)++;
 	uint16_t k = (*cpuLreg + tmp);
@@ -1424,7 +1424,7 @@ void outi()	{ /* OUTI */
 void otir()	{ /* OTIR */
 uint8_t tmp = *read_z80_memory(*cpuHLreg); /* to be written to port */
 (*cpuBreg)--; /* byte counter */
-synchronize(1);
+z80_synchronize(1);
 write_z80_register(*cpuCreg, tmp);
 (*cpuHLreg)++;
 if (*cpuBreg){
@@ -1437,7 +1437,7 @@ uint16_t k = (*cpuLreg + tmp);
 void outd()	{ /* OUTD */
 	uint8_t tmp = *read_z80_memory(*cpuHLreg); /* to be written to port */
 	(*cpuBreg)--; /* byte counter */
-	synchronize(1);
+	z80_synchronize(1);
 	write_z80_register(*cpuCreg, tmp);
 	(*cpuHLreg)--;
 	uint16_t k = (*cpuLreg + tmp);
@@ -1446,7 +1446,7 @@ void outd()	{ /* OUTD */
 void otdr()	{ /* OUTD */
 	uint8_t tmp = *read_z80_memory(*cpuHLreg); /* to be written to port */
 	(*cpuBreg)--; /* byte counter */
-	synchronize(1);
+	z80_synchronize(1);
 	write_z80_register(*cpuCreg, tmp);
 	(*cpuHLreg)--;
 	if (*cpuBreg){

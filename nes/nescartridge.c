@@ -1,4 +1,5 @@
-#include "cartridge.h"
+#include "nescartridge.h"
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>	/* malloc; exit */
@@ -41,7 +42,7 @@ uint_fast8_t mirroring[4][4] = { { 0, 0, 1, 1 }, 	/* horizontal mirroring 	*/
  * nameSlot[3] = ciram + 0x400;
  */
 
-void load_rom(char *rom)
+void nes_load_rom(char *rom)
 {
 	romFile = fopen(rom, "r");
 	if (romFile == NULL) {
@@ -127,7 +128,7 @@ void load_rom(char *rom)
 	printf("CHRRAM size: %li bytes\n",cart.cramSize);
 }
 
-void close_rom()
+void nes_close_rom()
 {
 	free(prg);
 	if (cart.chrSize)

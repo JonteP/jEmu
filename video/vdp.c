@@ -35,9 +35,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h> /*exit */
+#include "../sms/smsemu.h"
 #include "../cpu/z80.h"
-#include "my_sdl.h"
-#include "smsemu.h"
+#include "../my_sdl.h"
 
 uint16_t lineCounter, lineReload;
 uint8_t controlFlag = 0, statusFlags = 0, readBuffer = 0, bgColor = 0, textColor, bgXScroll, bgYScroll, lineInt = 0;
@@ -51,7 +51,6 @@ struct DisplayMode pal192={256,342,288,313,192,240,243,246,259,313,224};
 struct DisplayMode pal224={256,342,288,313,224,256,259,262,275,313,256};
 int16_t vdpdot;
 uint16_t controlWord, vCounter = 0, hCounter = 0, addReg, ntAddress, ntMask, sgAddress, saAddress, ctAddress, pgAddress, pgMask;
-int frame = 0;
 /* Mapped memory */					/* TODO: dynamically allocate screenBuffer */
 uint32_t *screenBuffer;
 uint8_t vram[VRAM_SIZE], cram[CRAM_SIZE], smsColor[0xc0],
@@ -264,8 +263,7 @@ while (cycles) {
 		vCounter++;
 	if(vCounter == currentMode->fullheight){
 		vCounter = 0;
-		irqPulled = 0;
-		frame++;
+		z80_irqPulled = 0;
 		render_frame(smsColor);
 	}
 	else if ((vCounter == currentMode->vactive) && (vdpdot == -52)){
@@ -280,10 +278,10 @@ while (cycles) {
 	}
 	else if ((vCounter > currentMode->vactive) && (vdpdot == -51))
 		lineCounter = lineReload;
-	if (( ((statusFlags & INT) && frameInterrupt) || ((lineInt) && lineInterrupt) ) && !irqPulled)
-		irqPulled = 1;
-	else if ((!frameInterrupt /*|| (!(mode1 & 0x10))*/) && irqPulled)/* TODO: disabling line interrupt should deassert the IRQ line */
-			irqPulled = 0;
+	if (( ((statusFlags & INT) && frameInterrupt) || ((lineInt) && lineInterrupt) ) && !z80_irqPulled)
+		z80_irqPulled = 1;
+	else if ((!frameInterrupt /*|| (!(mode1 & 0x10))*/) && z80_irqPulled)/* TODO: disabling line interrupt should deassert the IRQ line */
+			z80_irqPulled = 0;
 	cycles--;
 	vdpdot++;
 }
