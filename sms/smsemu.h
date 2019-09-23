@@ -49,32 +49,11 @@
 #define IOCONTROL_PORTA_TH_DIRECTION 	0x02
 #define IOCONTROL_PORTA_TR_DIRECTION 	0x01
 
-typedef enum _region {
-	JAPAN,
-	EXPORT
-} Region;
-
-struct machine {
-	char *bios;
-	int  masterClock;
-	Video videoSystem;
-	Region region;
-	VDP_Version vdpVersion;
-	/* All below can probably be inferred:
-	 * has card slot
-	 * has expansion slot
-	 * has bios
-	 * has FM
-	 * has reset
-	 * has pause
-	 */
-};
-
 extern uint8_t quit, ioPort1, ioPort2, ioControl, region, reset;
 extern char cartFile[PATH_MAX], cardFile[PATH_MAX], expFile[PATH_MAX], biosFile[PATH_MAX];
-extern struct machine *currentMachine;
 extern FILE *logfile;
-void set_timings(uint8_t), iocontrol_write(uint8_t), reset_emulation(void), machine_menu_option(int);
+extern struct machine ntsc_us, ntsc_jp, pal1, pal2;
+void set_timings(uint8_t), iocontrol_write(uint8_t), machine_menu_option(int);
 int smsemu(void);
 
 #endif /* SMSEMU_H_ */

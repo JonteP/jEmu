@@ -18,11 +18,6 @@
 #define NT_MASK 0x3c00
 #define PG_MASK 0x3800
 
-typedef enum video {
-	NTSC,
-	PAL
-} Video;
-
 typedef enum statusFlags {
 	INT = 0x80,
 	OVR = 0x40,
@@ -37,7 +32,7 @@ typedef enum version {
 	VDP_MD = 4
 } VDP_Version;
 
-struct DisplayMode {
+struct vdpDisplayMode {
 	uint16_t width;
 	uint16_t fullwidth;
 	uint16_t height;
@@ -53,10 +48,11 @@ struct DisplayMode {
 };
 
 extern uint8_t controlFlag, statusFlags, lineInt, smsColor[0xc0];
-extern uint32_t *screenBuffer;
+extern uint32_t *vdpScreenBuffer;
 extern int16_t vdpdot;
 extern uint16_t vCounter, hCounter;
-extern struct DisplayMode *currentMode, ntsc192, pal192;
+extern struct vdpDisplayMode *vdpCurrentMode, ntsc192, pal192;
+extern int sframe;
 
 void write_vdp_control(uint8_t), run_vdp(int), write_vdp_data(uint8_t), init_vdp(), reset_vdp(), close_vdp(), latch_hcounter(uint8_t), default_video_mode();
 uint8_t read_vdp_data(void);

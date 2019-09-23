@@ -260,14 +260,14 @@ if((z80_irqPulled && iff1 && !intDelay) || z80_nmiPulled){
 		write_z80_memory(--cpuSP, ( cpuPC & 0x00ff));
 		if (z80_irqPulled){
 			iff1 = iff2 = 0;
-			addcycles(13);
+			z80_addcycles(13);
 			z80_irqPulled = 0;
 			cpuPC = irq;
 		}
 		else if (z80_nmiPulled){
 			iff2 = iff1;
 			iff1 = 0;
-			addcycles(11);
+			z80_addcycles(11);
 			z80_nmiPulled = 0;
 			cpuPC = nmi;
 		}
@@ -276,7 +276,7 @@ if((z80_irqPulled && iff1 && !intDelay) || z80_nmiPulled){
 		intDelay = 0;
 		op = *read_z80_memory(cpuPC++);
 		cpuR = ((cpuR & 0x80) | ((cpuR & 0x7f) + 1));
-		addcycles(ctable[op]);
+		z80_addcycles(ctable[op]);
 		//fprintf(logfile,"%02x\t%04x\t%04x\n",op,cpuPC-1,cpuSP);
 		//if(cpuPC == 0xdf91)
 		//	exit(1);
@@ -307,7 +307,7 @@ static void (*cbtable[0x100])() = {
 	set,  set,  set,  set,  set,  set,  set,  set,  set,  set,  set,  set,  set,  set,  set,  set, /* f */
 	};
 op = *read_z80_memory(cpuPC++);
-addcycles(ccbtable[op]);
+z80_addcycles(ccbtable[op]);
 (*cbtable[op])();
 }
 void dd(){
@@ -331,7 +331,7 @@ static void (*ddtable[0x100])() = {
 	unp, noop, noop, noop, noop, noop, noop, noop, noop,lspix, noop, noop, noop,  nop, noop, noop, /* f */
 	};
 op = *read_z80_memory(cpuPC++);
-addcycles(cddtable[op]);
+z80_addcycles(cddtable[op]);
 (*ddtable[op])();
 }
 void ed(){
@@ -355,7 +355,7 @@ static void (*edtable[0x100])() = {
 	noop, noop, noop, noop, noop, noop, noop, noop, noop, noop, noop, noop, noop, noop, noop, noop, /* f */
 	};
 op = *read_z80_memory(cpuPC++);
-addcycles(cedtable[op]);
+z80_addcycles(cedtable[op]);
 (*edtable[op])();
 }
 void fd(){
@@ -379,7 +379,7 @@ static void (*fdtable[0x100])() = {
 	noop, noop, noop, noop, noop, noop, noop, noop, noop,lspiy, noop, noop, unp, unp, unp, unp, /* f */
 	};
 op = *read_z80_memory(cpuPC++);
-addcycles(cfdtable[op]);
+z80_addcycles(cfdtable[op]);
 (*fdtable[op])();
 }
 
@@ -405,7 +405,7 @@ void ddcb(){
 	};
 	displace = *read_z80_memory(cpuPC++);
 	op = *read_z80_memory(cpuPC++);
-	addcycles(cddcbtable[op]);
+	z80_addcycles(cddcbtable[op]);
 	(*ddcbtable[op])();
 }
 void fdcb(){
@@ -430,7 +430,7 @@ void fdcb(){
 	};
 	displace = *read_z80_memory(cpuPC++);
 	op = *read_z80_memory(cpuPC++);
-	addcycles(cfdcbtable[op]);
+	z80_addcycles(cfdcbtable[op]);
 	(*fdcbtable[op])();
 }
 
@@ -664,7 +664,7 @@ void ldir()	{ /* LDIR */
 	write_z80_memory((*cpuDEreg)++, *read_z80_memory((*cpuHLreg)++));
 	if (*cpuBCreg){
 		cpuPC -= 2;
-		addcycles(5);
+		z80_addcycles(5);
 	}
 	*cpuFreg = ((*cpuFreg & SZYXC_FLAG) | (*cpuBCreg ? P_FLAG : 0));
 }
@@ -678,7 +678,7 @@ void lddr()	{ /* LDDR */
 	write_z80_memory((*cpuDEreg)--, *read_z80_memory((*cpuHLreg)--));
 	if (*cpuBCreg){
 		cpuPC -= 2;
-		addcycles(5);
+		z80_addcycles(5);
 	}
 	*cpuFreg = ((*cpuFreg & SZYXC_FLAG) | (*cpuBCreg ? P_FLAG : 0));
 }
@@ -694,7 +694,7 @@ void cpir()	{ /* CPIR */
 	uint16_t res = *cpuAreg - val;
 	if (*cpuBCreg && res){
 		cpuPC -= 2;
-		addcycles(5);
+		z80_addcycles(5);
 	}
 	*cpuFreg = ((*cpuFreg & YXC_FLAG) | (res & S_FLAG) | (!(res) << Z_SHIFT) | (((*cpuAreg & 0xf) < (val & 0xf)) << H_SHIFT) | (*cpuBCreg ? P_FLAG : 0) | N_FLAG);
 }
@@ -710,7 +710,7 @@ void cpdr()	{ /* CPDR */
 	uint16_t res = *cpuAreg - val;
 	if (*cpuBCreg && res){
 		cpuPC -= 2;
-		addcycles(5);
+		z80_addcycles(5);
 	}
 	*cpuFreg = ((*cpuFreg & YXC_FLAG) | (res & S_FLAG) | (!(res) << Z_SHIFT) | (((*cpuAreg & 0xf) < (val & 0xf)) << H_SHIFT) | (*cpuBCreg ? P_FLAG : 0) | N_FLAG);
 }
@@ -1290,7 +1290,7 @@ void jrc()	{ /* JR cc,e */
 	uint8_t cc[4] = {!(*cpuFreg & Z_FLAG), (*cpuFreg & Z_FLAG), !(*cpuFreg & C_FLAG), (*cpuFreg & C_FLAG)};
 	if(cc[((op>>3) & 7) - 4]) {
 		jr();
-		addcycles(5);
+		z80_addcycles(5);
 	}
 	else
 		cpuPC++;
@@ -1308,7 +1308,7 @@ void djnz()	{ /* DJNZ,e */
 	(*cpuBreg)--;
 	if(*cpuBreg) {
 		cpuPC += ((int8_t)*read_z80_memory(cpuPC) + 1);
-		addcycles(5);
+		z80_addcycles(5);
 	}
 	else
 		cpuPC++;
@@ -1332,7 +1332,7 @@ void callc(){ /* CALL cc,nn */
 		write_z80_memory(--cpuSP, ((cpuPC & 0xff00) >> 8));
 		write_z80_memory(--cpuSP, (cpuPC & 0x00ff));
 		cpuPC = address;
-		addcycles(7);
+		z80_addcycles(7);
 	}
 }
 void ret()	{ /* RET */
@@ -1344,7 +1344,7 @@ void retc()	{ /* RET cc */
 	uint8_t cc[8] = {!(*cpuFreg & Z_FLAG), (*cpuFreg & Z_FLAG), !(*cpuFreg & C_FLAG), (*cpuFreg & C_FLAG), !(*cpuFreg & P_FLAG), (*cpuFreg & P_FLAG), !(*cpuFreg & S_FLAG), (*cpuFreg & S_FLAG)};
 	if (cc[(op >> 3) & 7]){
 		ret();
-		addcycles(6);
+		z80_addcycles(6);
 	}
 }
 void reti()	{ /* RETI */
@@ -1398,7 +1398,7 @@ void inir()	{ /* INIR */
 (*cpuHLreg)++;
 if (*cpuBreg){
 	cpuPC -= 2;
-	addcycles(5);
+	z80_addcycles(5);
 }
 uint16_t k = (((*cpuCreg + 1) & 0xff) + tmp);
 *cpuFreg = ((*cpuFreg & YX_FLAG) | (*cpuBreg & S_FLAG) | ((!*cpuBreg) << Z_SHIFT) | ((k > 0xff) << H_SHIFT) | parcalc((k & 7) ^ *cpuBreg) | ((tmp & 0x80) >> 6) | (k > 0xff));
@@ -1429,7 +1429,7 @@ write_z80_register(*cpuCreg, tmp);
 (*cpuHLreg)++;
 if (*cpuBreg){
 	cpuPC -= 2;
-	addcycles(5);
+	z80_addcycles(5);
 }
 uint16_t k = (*cpuLreg + tmp);
 *cpuFreg = ((*cpuFreg & YX_FLAG) | (*cpuBreg & S_FLAG) | ((!*cpuBreg) << Z_SHIFT) | ((k > 0xff) << H_SHIFT) | parcalc((k & 7) ^ *cpuBreg) | ((tmp & 0x80) >> 6) | (k > 0xff));
@@ -1451,7 +1451,7 @@ void otdr()	{ /* OUTD */
 	(*cpuHLreg)--;
 	if (*cpuBreg){
 		cpuPC -= 2;
-		addcycles(5);
+		z80_addcycles(5);
 	}
 	uint16_t k = (*cpuLreg + tmp);
 	*cpuFreg = ((*cpuFreg & YX_FLAG) | (*cpuBreg & S_FLAG) | ((!*cpuBreg) << Z_SHIFT) | ((k > 0xff) << H_SHIFT) | parcalc((k & 7) ^ *cpuBreg) | ((tmp & 0x80) >> 6) | (k > 0xff));

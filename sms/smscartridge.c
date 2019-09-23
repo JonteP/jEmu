@@ -1,5 +1,4 @@
 #include "smscartridge.h"
-
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>	/* malloc; exit */
@@ -8,6 +7,7 @@
 #include "tree.h"
 #include "sha.h"
 #include "smsemu.h"
+#include "../jemu.h"
 
 #define EXPANSION_DISABLE	0x80
 #define CART_DISABLE		0x40
@@ -36,7 +36,7 @@ int init_slots(){
 		printf("The BIOS ROM was not found.\n");
 		return 1;
 	}
-	cartRom = load_rom(cartFile);
+	cartRom = load_rom(currentMachine->cartFile);
 	cardRom = load_rom(cardFile);
 	expRom  = load_rom(expFile);
 	xmlFreeDoc(smsXml);

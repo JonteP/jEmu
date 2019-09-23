@@ -21,6 +21,7 @@
 #include "audio/ym2413.h"
 #include "cpu/z80.h"
 #include "sms/smscartridge.h"
+#include "jemu.h"
 
 #define RENDER_FLAGS	(SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE)
 
@@ -39,7 +40,7 @@ io_function io_func;
 uint8_t currentMenuColumn = 0, currentMenuRow = 0, oldMenuRow = 0, menuFontSize = 18, filesLeft = 0;
 uint16_t channelMask = 0x1ff, rhythmMask = 0x1f;
 DIR *currentDir;
-char *defaultDir = "/home/jonas/Desktop/sms/unsorted/", workDir[PATH_MAX];
+char *defaultDir = "/home/jonas/git/roms/", workDir[PATH_MAX];
 int fileListOffset = 0, oldFileListOffset = 0;
 float frameTime, fps;
 int clockRate;
@@ -87,6 +88,7 @@ void init_sdl_video(){
 		exit(EXIT_FAILURE);}
 	if(Sans)
 		TTF_CloseFont(Sans);
+	menuFontSize = (currentSettings->window.winHeight >> 5);
 	Sans = TTF_OpenFont("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", menuFontSize);
 	if(!Sans){
 		printf("TTF_OpenFont failed: %s\n", TTF_GetError());
@@ -229,8 +231,8 @@ float diff_time(struct timespec *start, struct timespec *end){
 	return temp;
 }
 
-void render_frame(){
-	render_window (&currentSettings->window, screenBuffer);
+void render_frame(uint32_t *buffer){
+	render_window (&currentSettings->window, buffer);
 	idle_time(frameTime);
 	io_func();
 }
@@ -292,7 +294,7 @@ void append_to_dir(char *dir, const char *str){
 		else if(!is_directory(dir)){
 			toggle_menu();
 			clear_screen(currentSettings->window.rend);
-			strcpy(cartFile,dir);
+			strcpy(currentMachine->cartFile,dir);
 			get_parent_dir(dir);
 			reset_emulation();
 		}
@@ -395,12 +397,15 @@ void create_menu(){	/* define menus */
 	audioMenu.parent = &mainMenu;
 	get_menu_size(&audioMenu, mainMenu.xOffset[3] - mainMenu.margin, mainMenu.height + (mainMenu.margin << 1));
 
-	machineList.length = 4;
+	machineList.length = 7;
 	machineList.margin = 0;
-	strcpy(machineList.name[0], "NTSC (Japan)");
-	strcpy(machineList.name[1], "NTSC (US)");
-	strcpy(machineList.name[2], "PAL [VDP 1]");
-	strcpy(machineList.name[3], "PAL [VDP 2]");
+	strcpy(machineList.name[0], "Sega Master System - NTSC (Japan)");
+	strcpy(machineList.name[1], "Sega Master System - NTSC (US)");
+	strcpy(machineList.name[2], "Sega Master System - PAL [VDP 1]");
+	strcpy(machineList.name[3], "Sega Master System - PAL [VDP 2]");
+	strcpy(machineList.name[4], "Nintendo Entertainment System - NTSC (Japan)");
+	strcpy(machineList.name[5], "Nintendo Entertainment System - NTSC (US)");
+	strcpy(machineList.name[6], "Nintendo Entertainment System - PAL");
 	machineList.type = CENTERED;
 	get_menu_size(&machineList, 0, 0);
 
@@ -546,15 +551,14 @@ void main_menu_option(int option){
 }
 
 void output_sound(float *buffer, int counter){
-	float sample[counter];
+//	float sample[counter];
 	if (!throttle || (SDL_GetQueuedAudioSize(1) > (audioSettings.size * audioSettings.channels)))
 		SDL_ClearQueuedAudio(1);
-//	printf("%i\n",sn79489_SampleCounter);
-	for(int i = 0;i < counter;i++){
-		sample[i] = (ym2413_SampleBuffer[i] + sn79489_SampleBuffer[i]) / 2;
-	}
-	sn79489_SampleCounter = 0;
-	if (SDL_QueueAudio(1, sample, counter * sizeof(*buffer)))
+//	for(int i = 0;i < counter;i++){
+//		sample[i] = (ym2413_SampleBuffer[i] + sn79489_SampleBuffer[i]) / 2;
+//	}
+	//sn79489_SampleCounter = 0;
+	if (SDL_QueueAudio(1, buffer, counter * sizeof(*buffer)))
 		printf("SDL_QueueAudio failed: %s\n", SDL_GetError());
 }
 
@@ -780,28 +784,36 @@ void game_io(){
 					isPaused ^= 1;
 				break;
 			case SDL_SCANCODE_UP:
-				ioPort1 &= ~IO1_PORTA_UP;
+				player1_buttonUp(1);
+				//ioPort1 &= ~IO1_PORTA_UP;
 				break;
 			case SDL_SCANCODE_DOWN:
-				ioPort1 &= ~IO1_PORTA_DOWN;
+				player1_buttonDown(1);
+				//ioPort1 &= ~IO1_PORTA_DOWN;
 				break;
 			case SDL_SCANCODE_LEFT:
-				ioPort1 &= ~IO1_PORTA_LEFT;
+				player1_buttonLeft(1);
+				//ioPort1 &= ~IO1_PORTA_LEFT;
 				break;
 			case SDL_SCANCODE_RIGHT:
-				ioPort1 &= ~IO1_PORTA_RIGHT;
+				player1_buttonRight(1);
+				//ioPort1 &= ~IO1_PORTA_RIGHT;
 				break;
 			case SDL_SCANCODE_RETURN:
-				z80_nmiPulled = 1;
+				player1_buttonStart(1);
+				//z80_nmiPulled = 1;
 				break;
 			case SDL_SCANCODE_BACKSPACE:
-				ioPort2 &= ~IO2_RESET;
+				player1_buttonSelect(1);
+				//ioPort2 &= ~IO2_RESET;
 				break;
 			case SDL_SCANCODE_Z:
-				ioPort1 &= ~IO1_PORTA_TL;
+				player1_button1(1);
+			//	ioPort1 &= ~IO1_PORTA_TL;
 				break;
 			case SDL_SCANCODE_X:
-				ioPort1 &= ~IO1_PORTA_TR;
+				player1_button2(1);
+				//ioPort1 &= ~IO1_PORTA_TR;
 				break;
 			case SDL_SCANCODE_I:
 				ioPort1 &= ~IO1_PORTB_UP;
@@ -832,25 +844,32 @@ void game_io(){
 		case SDL_KEYUP:
 			switch (event.key.keysym.scancode){
 			case SDL_SCANCODE_UP:
-				ioPort1 |= IO1_PORTA_UP;
+				player1_buttonUp(0);
+				//ioPort1 |= IO1_PORTA_UP;
 				break;
 			case SDL_SCANCODE_DOWN:
-				ioPort1 |= IO1_PORTA_DOWN;
+				player1_buttonDown(0);
+				//ioPort1 |= IO1_PORTA_DOWN;
 				break;
 			case SDL_SCANCODE_LEFT:
-				ioPort1 |= IO1_PORTA_LEFT;
+				player1_buttonLeft(0);
+				//ioPort1 |= IO1_PORTA_LEFT;
 				break;
 			case SDL_SCANCODE_RIGHT:
-				ioPort1 |= IO1_PORTA_RIGHT;
+				player1_buttonRight(0);
+				//ioPort1 |= IO1_PORTA_RIGHT;
 				break;
 			case SDL_SCANCODE_BACKSPACE:
-				ioPort2 |= IO2_RESET;
+				player1_buttonSelect(0);
+				//ioPort2 |= IO2_RESET;
 				break;
 			case SDL_SCANCODE_Z:
-				ioPort1 |= IO1_PORTA_TL;
+				player1_button1(0);
+				//ioPort1 |= IO1_PORTA_TL;
 				break;
 			case SDL_SCANCODE_X:
-				ioPort1 |= IO1_PORTA_TR;
+				player1_button2(0);
+				//ioPort1 |= IO1_PORTA_TR;
 				break;
 			case SDL_SCANCODE_I:
 				ioPort1 |= IO1_PORTB_UP;
@@ -869,6 +888,10 @@ void game_io(){
 				break;
 			case SDL_SCANCODE_S:
 				ioPort2 |= IO2_PORTB_TR;
+				break;
+			case SDL_SCANCODE_RETURN:
+				player1_buttonStart(0);
+				//z80_nmiPulled = 1;
 				break;
 			default:
 				break;

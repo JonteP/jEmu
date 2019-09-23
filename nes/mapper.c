@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "globals.h"
 #include "../cpu/6502.h"
 #include "../video/ppu.h"
 #include "nescartridge.h"
+#include "nesemu.h"
 
 uint_fast8_t mapperInt = 0, expSound = 0,
 			 prgBank[8], chrBank[8];

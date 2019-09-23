@@ -60,6 +60,13 @@ extern uint16_t channelMask, rhythmMask;
 extern float frameTime, fps;
 extern int clockRate;
 
-void render_frame(), init_sdl(sdlSettings*), init_sdl_video(void), init_sdl_audio(void), close_sdl(void), init_sounds(void), output_sound(float *, int), destroy_handle (windowHandle *), init_time(float), toggle_menu(void);
-
+void render_frame(uint32_t *), init_sdl(sdlSettings*), init_sdl_video(void), init_sdl_audio(void), close_sdl(void), init_sounds(void), output_sound(float *, int), destroy_handle (windowHandle *), init_time(float), toggle_menu(void);
+void (*player1_button1)(uint8_t),
+	 (*player1_button2)(uint8_t),
+	 (*player1_buttonStart)(uint8_t),
+	 (*player1_buttonSelect)(uint8_t),
+	 (*player1_buttonUp)(uint8_t),
+	 (*player1_buttonDown)(uint8_t),
+	 (*player1_buttonLeft)(uint8_t),
+	 (*player1_buttonRight)(uint8_t);
 #endif /* MY_SDL_H_ */

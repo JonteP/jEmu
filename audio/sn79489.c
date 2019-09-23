@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include "../my_sdl.h"
 #include "../sms/smsemu.h"
+#include "../video/vdp.h"
+
 float *sn79489_SampleBuffer, sn79489_Sample = 0;
 static uint32_t sampleRate, originalSampleRate;
 const float volume_table[16]={ .32767, .26028, .20675, .16422, .13045, .10362, .08231, .06568, //could be made integer?
@@ -39,7 +41,7 @@ void init_sn79489(int buffer){
 	bufferSize = buffer;
 	if(sn79489_SampleBuffer)
 		free(sn79489_SampleBuffer);
-	sn79489_SampleBuffer = (float *)malloc(bufferSize * sizeof(float));
+	sn79489_SampleBuffer = malloc(bufferSize * sizeof(float));
 	tone0.volume = tone1.volume = tone2.volume = noiseVolume = 0xf;
 	tone0.reg = tone1.reg = tone2.reg = noiseReload = tone0.phase = tone1.phase = tone2.phase = 0;
 	tone0.output = tone1.output = tone2.output = noiseOutput = 0;
@@ -152,7 +154,7 @@ while(audioCyclesToRun){
 	if(origSampleCounter == (sampleRate >> FRAC_BITS)){
 		sn79489_SampleBuffer[sn79489_SampleCounter++] = (float)(sn79489_Sample / origSampleCounter);
 		if(sn79489_SampleCounter == bufferSize){
-		//	output_sound(sn79489_SampleBuffer, sn79489_SampleCounter);
+			output_sound(sn79489_SampleBuffer, sn79489_SampleCounter);
 			sn79489_SampleCounter = 0;
 		}
 		sampleRate = originalSampleRate + sampleRate - (origSampleCounter << FRAC_BITS);

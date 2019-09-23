@@ -1,23 +1,72 @@
+/*Versions:
+ *
+ * Ricoh RP2C02 - NTSC version
+ * Ricoh RP2C07 - PAL version
+ */
+
 #include "ppu.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h> 	/* clock */
 #include <unistd.h> /* usleep */
-#include "../nes/globals.h"
 #include "../audio/apu.h"
 #include "../nes/mapper.h"
 #include "../my_sdl.h"
 #include "../cpu/6502.h"
 #include "../nes/nescartridge.h"
+#include "../nes/nesemu.h"
 
 static inline void check_nmi(), horizontal_t_to_v(), vertical_t_to_v(), ppu_render(), reload_tile_shifter(), toggle_a12(uint_fast16_t), ppuwrite(uint_fast16_t, uint_fast8_t);
 static inline uint_fast8_t * ppuread(uint_fast16_t);
 
-uint_fast8_t *chrSlot[0x8], *nameSlot[0x4], oam[0x100], frameBuffer[SHEIGHT][SWIDTH], nameBuffer[SHEIGHT<<1][SWIDTH<<1], patternBuffer[SWIDTH>>1][SWIDTH], paletteBuffer[SWIDTH>>4][SWIDTH>>1];
+//http://www.firebrandx.com/nespalette.html for more palettes
+uint_fast8_t colarray[] = {
+ /*       00      |      01      |      02      |      03      |        */
+ /*  R  | G  | B  | R  | G  | B  | R  | G  | B  | R  | G  | B  |        */
+	124, 124, 124,   0,   0, 252,   0,   0, 188,  68,  40, 188, /* 0x00 */
+    148,   0, 132, 168,   0,  32, 168,  16,   0, 136,  20,   0, /* 0x04 */
+     80,  48,   0,   0, 120,   0,   0, 104,   0,   0,  88,   0, /* 0x08 */
+	  0,  64,  88,   0,   0,   0,   0,   0,   0,   0,   0,   0, /* 0x0c */
+    188, 188, 188,   0, 120, 248,   0,  88, 248, 104,  68, 252, /* 0x10 */
+    216,   0, 204, 228,   0,  88, 248,  56,   0, 228,  92,  16, /* 0x14 */
+    172, 124,   0,   0, 184,   0,   0, 168,   0,   0, 168,  68, /* 0x18 */
+      0, 136, 136,   0,   0,   0,   0,   0,   0,   0,   0,   0, /* 0x1c */
+    248, 248, 248,  60, 188, 252, 104, 136, 252, 152, 120, 248, /* 0x20 */
+    248, 120, 248, 248,  88, 152, 248, 120,  88, 252, 160,  68, /* 0x24 */
+    248, 184,   0, 184, 248,  24,  88, 216,  84,  88, 248, 152, /* 0x28 */
+      0, 232, 216, 120, 120, 120,   0,   0,   0,   0,   0,   0, /* 0x2c */
+    252, 252, 252, 164, 228, 252, 184, 184, 248, 216, 184, 248, /* 0x30 */
+    248, 184, 248, 248, 164, 192, 240, 208, 176, 252, 224, 168, /* 0x34 */
+    248, 216, 120, 216, 248, 120, 184, 248, 184, 184, 248, 216, /* 0x38 */
+      0, 252, 252, 248, 216, 248,   0,   0,   0,   0,   0,   0  /* 0x3c */
+};
+
+ /*       00      |      01      |      02      |      03      |        */
+ /*  R  | G  | B  | R  | G  | B  | R  | G  | B  | R  | G  | B  |        */
+uint_fast8_t colblargg[] = {  84,  84,  84,   0,  30, 116,   8,  16, 144,  48,   0, 136,
+     68,   0, 100,  92,   0,  48,  84,   4,   0,  60,  24,   0,
+	 32,  42,   0,   8,  58,   0,   0,  64,   0,   0,  60,   0,
+	  0,  50,  60,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+	152, 150, 152,   8,  76, 196,  48,  50, 236,  92,  30, 228,
+	136,  20, 176, 160,  20, 100, 152,  34,  32, 120,  60,   0,
+	 84,  90,   0,  40, 114,   0,   8, 124,   0,   0, 118,  40,
+	  0, 102, 120,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+	236, 238, 236,  76, 154, 236, 120, 124, 236, 176,  98, 236,
+	228,  84, 236, 236,  88, 180, 236, 106, 100, 212, 136,  32,
+	160, 170,   0, 116, 196,   0,  76, 208,  32,  56, 204, 108,
+	 56, 180, 204,  60,  60,  60,   0,   0,   0,   0,   0,   0,
+	236, 238, 236, 168, 204, 236, 188, 188, 236, 212, 178, 236,
+	236, 174, 236, 236, 174, 212, 236, 180, 176, 228, 196, 144,
+	204, 210, 120, 180, 222, 120, 168, 226, 144, 152, 226, 180,
+	160, 214, 228, 160, 162, 160,   0,   0,   0,   0,   0,   0 };
+
+struct ppuDisplayMode ntscMode = { 256, 240, NTSC_SCANLINES }, palMode = { 256, 240, PAL_SCANLINES }, *ppuCurrentMode;
+uint_fast8_t *chrSlot[0x8], *nameSlot[0x4], oam[0x100];
 uint_fast8_t ppuOamAddress;
 int16_t ppudot = 0, ppu_vCounter = 0;
 uint_fast8_t ciram[0x800], palette[0x20];
 static uint_fast8_t vblank_period = 0, nmiSuppressed = 0, secOam[0x20];
+uint32_t *ppuScreenBuffer = NULL;
 
 /* PPU internal registers */
 uint_fast8_t ppuW = 0, ppuX = 0;
@@ -32,6 +81,12 @@ int32_t ppucc = 0;
 static uint_fast8_t ppuStatusNmiDelay = 0;
 
 static inline void none(), seZ(), seRD(), seWD(), seRR(), seWW(), tfNT(), tfAT(), tfLT(), tfHT(), sfNT(), sfAT(), sfLT(), sfHT(), dfNT(), hINC(), vINC();
+
+void init_ppu(){
+	free(ppuScreenBuffer);
+	ppuScreenBuffer = malloc(ppuCurrentMode->height * ppuCurrentMode->width * sizeof(uint32_t));
+	//memset(ppuScreenBuffer, 0xff0000ff, ppuCurrentMode->height * ppuCurrentMode->width * sizeof(uint32_t));
+}
 
 void run_ppu (uint_fast16_t ntimes) {
 	static void (*spriteEvaluation[0x341])() = {
@@ -98,7 +153,7 @@ void run_ppu (uint_fast16_t ntimes) {
 		ppu_vCounter++;
 		ppudot = 0;
 		}
-		if (ppu_vCounter == 262)
+		if (ppu_vCounter == ppuCurrentMode->scanlines)
 		{
 		ppu_vCounter = 0;
 		frame++;
@@ -110,7 +165,7 @@ void run_ppu (uint_fast16_t ntimes) {
 		vblank_period = 1;
 
 /* PRERENDER SCANLINE */
-	} else if (ppu_vCounter == 261) {
+	} else if (ppu_vCounter == (ppuCurrentMode->scanlines - 1)) {
 		if (ppuMask & 0x18)
 		{
 			(*fetchGraphics[ppudot])();
@@ -140,7 +195,7 @@ void run_ppu (uint_fast16_t ntimes) {
 			  else if (ppudot >= 280 && ppudot <= 304)
 				  vertical_t_to_v();
 		  } else if (ppudot == 339) {
-				if (frame%2 && (ppuMask & 0x18))
+				if (frame%2 && (ppuMask & 0x18) && ppuCurrentMode->scanlines == NTSC_SCANLINES)
 					ppudot++;
 		}
 
@@ -152,7 +207,7 @@ void run_ppu (uint_fast16_t ntimes) {
 	} else if (ppu_vCounter < 240)
 	{
 		if (!ppu_vCounter && !ppudot)
-			render_frame();
+			render_frame(ppuScreenBuffer);
 		if (ppuMask & 0x18)
 		{
 		(*fetchGraphics[ppudot])();
@@ -163,7 +218,7 @@ void run_ppu (uint_fast16_t ntimes) {
 			horizontal_t_to_v();
 	}
 	ntimes--;
-	vdp_wait--;
+	vdp_wait -= (1 << 16);
 	}
 }
 static uint_fast8_t bgData, ntData, attData, tileLow, tileHigh, spriteLow, spriteHigh;
@@ -362,7 +417,9 @@ void reload_tile_shifter()
 }
 
 void ppu_render()
-{/* save for render
+{
+	uint8_t color;
+/* save for render
  * color mask
  *
  * The shifters shift at h=2, the palette address changes at h=3 for the palette lookup, and the pixel is drawn during h=4 (as seen by vid_ changing).
@@ -390,23 +447,22 @@ void ppu_render()
 				if (!ppuStatusSpriteZero && zeroBuffer[cDot] && cDot<255)
 				{
 					ppuStatusSpriteZero = 1;
-					frameBuffer[ppu_vCounter][cDot] = 0x10;
+					color = 0x10;
 				}
-				frameBuffer[ppu_vCounter][cDot] = priorityBuffer[cDot] ?  *ppuread(0x3f00 + pValue) : spriteBuffer[cDot];
+				color = priorityBuffer[cDot] ?  *ppuread(0x3f00 + pValue) : spriteBuffer[cDot];
 			}
 			else if (isSprite && !isBg)
-			{
-				frameBuffer[ppu_vCounter][cDot] = spriteBuffer[cDot];
-			}
+				color = spriteBuffer[cDot];
 			else if (isBg && !isSprite)
-				frameBuffer[ppu_vCounter][cDot] = *ppuread(0x3f00 + pValue);
+				color = *ppuread(0x3f00 + pValue);
 			else
-				frameBuffer[ppu_vCounter][cDot] = bgColor;
+				color = bgColor;
+			ppuScreenBuffer[ppu_vCounter * ppuCurrentMode->width + cDot] = (0xff000000 | (colblargg[color * 3] << 16) | (colblargg[(color * 3) + 1] << 8) | colblargg[(color * 3) + 2]);
 			}
-			tileShifterHigh = (tileShifterHigh << 1);
-			tileShifterLow = (tileShifterLow << 1);
-			attShifterHigh = (attShifterHigh << 1);
-			attShifterLow = (attShifterLow << 1);
+			tileShifterHigh <<= 1;
+			tileShifterLow <<= 1;
+			attShifterHigh <<= 1;
+			attShifterLow <<= 1;
 		if (ppudot == 257)
 		{
 			nSprite2 = 0;
@@ -420,10 +476,10 @@ void ppu_render()
 	{
 		if (ppudot%8 == 1)
 			reload_tile_shifter();
-		tileShifterHigh = (tileShifterHigh << 1);
-		tileShifterLow = (tileShifterLow << 1);
-		attShifterHigh = (attShifterHigh << 1);
-		attShifterLow = (attShifterLow << 1);
+		tileShifterHigh <<= 1;
+		tileShifterLow <<= 1;
+		attShifterHigh <<= 1;
+		attShifterLow <<= 1;
 	}
 }
 
@@ -442,7 +498,7 @@ void vertical_t_to_v()
 	ppuV = (ppuV & 0x841f) | (ppuT & 0x7be0); /* reset Y scroll */
 	}
 }
-
+/*
 void draw_nametable () {
 	uint_fast8_t	*tilesrcA, npalA, attsrcA, paletteIndexA, *tilesrcB, npalB, attsrcB, paletteIndexB, *tilesrcC, npalC, attsrcC, paletteIndexC, *tilesrcD, npalD, attsrcD, paletteIndexD;
 	uint_fast16_t tileOffsetA, tileOffsetB, tileOffsetC, tileOffsetD;
@@ -558,7 +614,7 @@ void draw_palette () {
 		}
 	}
 }
-
+*/
 static uint_fast8_t ppureg = 0, vbuff = 0;
 uint_fast8_t read_ppu_register(uint_fast16_t addr) {
 	unsigned int tmpval8;

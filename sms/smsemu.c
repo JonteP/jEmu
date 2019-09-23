@@ -8,6 +8,7 @@
 #include "../audio/ym2413.h"
 #include "smscartridge.h"
 #include "../jemu.h"
+#include "../my_sdl.h"
 
 /* Compatibility:
  * zool - hangs at game start (interrupts?) discussion here: http://www.smspower.org/forums/9366-IRQAndIperiodNightmare
@@ -25,51 +26,68 @@
  * -port access behavior differs between consoles (open bus)
  * -randomize startup vcounter? - some game rely on "random" R reg values: http://www.smspower.org/forums/11329-ImpossibleMissionAndTheAbuseOfTheRRegister#87153
  */
-static inline void init_video(void), init_audio(void);
-char cartFile[PATH_MAX], cardFile[PATH_MAX], expFile[PATH_MAX], biosFile[PATH_MAX];
+static inline void init_video(void), init_audio(void), sms_reset_emulation(void);
+char cardFile[PATH_MAX], expFile[PATH_MAX], biosFile[PATH_MAX];
 uint8_t ioPort1, ioPort2, ioControl, region, reset = 0, failure = 0;
 uint8_t sms_read_z80_register(uint8_t), * sms_read_z80_memory(uint16_t);
 void sms_write_z80_register(uint8_t, uint8_t), sms_write_z80_memory(uint16_t, uint8_t), sms_addcycles(uint8_t), sms_synchronize(int);
-struct machine ntsc_us={"mpr-10052.ic2",NTSC_MASTER,NTSC,EXPORT,VDP_1}, pal1={"mpr-10052.ic2",PAL_MASTER,PAL,EXPORT,VDP_1}, pal2={"mpr-12808.ic2",PAL_MASTER,PAL,EXPORT,VDP_2}, ntsc_jp={"mpr-11124.ic2",NTSC_MASTER,NTSC,JAPAN,VDP_1}, *currentMachine;
+
+//							MACHINE		BIOS				CART	MASTER CLOCK		VIDEO		REGION		VIDEO CARD		AUDIO CARD		HAS EXPANSION SOUND
+struct machine ntsc_us =  { SMS,		"mpr-10052.ic2",	"",		NTSC_MASTER,		NTSC,		EXPORT,		VDP_1,			0,				0					},
+				  pal1 =  { SMS,		"mpr-10052.ic2",	"", 	 PAL_MASTER, 		 PAL,		EXPORT,		VDP_1,			0,				0					},
+				  pal2 =  { SMS,		"mpr-12808.ic2",	"", 	 PAL_MASTER, 		 PAL,		EXPORT,		VDP_2,			0,				0					},
+			   ntsc_jp =  { SMS,		"mpr-11124.ic2",	"",		NTSC_MASTER,		NTSC, 		 JAPAN,		VDP_1,			0,				1					};
+
+static void sms_p1b1(uint8_t), sms_p1b2(uint8_t), sms_reset(uint8_t), sms_p1up(uint8_t), sms_p1down(uint8_t), sms_p1left(uint8_t), sms_p1right(uint8_t), sms_pause(uint8_t);
 int vdpCyclesToRun = 0;
-FILE *logfile;
+//FILE *logfile;
 
 int smsemu(){
-	logfile = fopen("/home/jonas/git/logfile.txt","w");
+/*	logfile = fopen("/home/jonas/git/logfile.txt","w");
 	if (logfile==NULL){
 		printf("Error: Could not create logfile\n");
 		return 1;
 	}
+*/
+	//hook up general
+	reset_emulation = &sms_reset_emulation;
 
 	//hook up CPU
 	read_z80_memory = &sms_read_z80_memory;
 	write_z80_memory = &sms_write_z80_memory;
 	read_z80_register = &sms_read_z80_register;
 	write_z80_register = &sms_write_z80_register;
-	addcycles = &sms_addcycles;
+	z80_addcycles = &sms_addcycles;
 	z80_synchronize = &sms_synchronize;
 
-	strcpy(cartFile, "/home/jonas/Desktop/sms/unsorted/Other/Sonic The Hedgehog (FM v1.02).sms");
-	currentMachine = &ntsc_jp;
+	//Hook up input functions
+	player1_button1 = &sms_p1b1;
+	player1_button2 = &sms_p1b2;
+	player1_buttonUp = &sms_p1up;
+	player1_buttonDown = &sms_p1down;
+	player1_buttonLeft = &sms_p1left;
+	player1_buttonRight = &sms_p1right;
+//	player1_buttonStart = &sms_p1start;
+//	player1_buttonSelect = &sms_p1select;
 
-	reset_emulation();
+	sms_reset_emulation();
 	if(failure)
 		return 1;
 	while (quit == 0){
 		run_z80();
 		if(reset){
 			reset = 0;
-			reset_emulation();
+			sms_reset_emulation();
 		}
 	}
-	fclose(logfile);
+//	fclose(logfile);
 	close_rom();
 	close_vdp();
 	close_sn79489();
 	return 0;
 }
 
-void reset_emulation(){
+void sms_reset_emulation(){
 	ioPort1 = ioPort2 = 0xff;
 	init_video();
 	init_audio();
@@ -83,10 +101,10 @@ void reset_emulation(){
 void set_timings(uint8_t mode){
 	if(mode == 1){ /* set FPS */
 		clockRate = currentMachine->masterClock;
-		fps = (float)clockRate/(currentMode->fullheight * currentMode->fullwidth * 10);
+		fps = (float)clockRate/(vdpCurrentMode->fullheight * vdpCurrentMode->fullwidth * 10);
 	}
 	else if(mode == 2){ /* set clock */
-		clockRate = (currentMode->fullheight * currentMode->fullwidth * 10 * fps);
+		clockRate = (vdpCurrentMode->fullheight * vdpCurrentMode->fullwidth * 10 * fps);
 	}
 	frameTime = (float)((1/fps) * 1000000000);
 	init_time(frameTime);
@@ -105,38 +123,11 @@ void iocontrol_write(uint8_t value){
 	latch_hcounter(old ^ (ioControl & (IOCONTROL_PORTA_TH_LEVEL | IOCONTROL_PORTB_TH_LEVEL)) ^ old);
 }
 
-void machine_menu_option(int option){
-	switch(option & 0xf){
-	case 1:
-		currentMachine = &ntsc_jp;
-		break;
-	case 2:
-		currentMachine = &ntsc_us;
-		break;
-	case 3:
-		currentMachine = &pal1;
-		break;
-	case 4:
-		currentMachine = &pal2;
-		break;
-	}
-	init_video();
-	set_timings(1);
-	init_audio();
-	toggle_menu();
-}
-
 void init_video(){
 	default_video_mode();
-	settings.renderQuality = "1";
 	settings.window.name = "smsEmu";
-	settings.window.screenHeight = currentMode->height;
-	settings.window.screenWidth = currentMode->width;
-	settings.window.visible = 1;
-	settings.window.winHeight = 600;
-	settings.window.winWidth = 800;
-	settings.window.winXPosition = 100;
-	settings.window.winYPosition = 100;
+	settings.window.screenHeight = vdpCurrentMode->height;
+	settings.window.screenWidth = vdpCurrentMode->width;
 	settings.window.xClip = 0;
 	settings.window.yClip = 0;
 	init_vdp();
@@ -214,7 +205,7 @@ uint8_t sms_read_z80_register(uint8_t reg){
 	case 0x01:
 		return 0xff; /* TODO: this is sms2 behavior only */
 	case 0x40: /* Read VDP V Counter */
-		return (currentMode->vcount[vCounter] & 0xff);
+		return (vdpCurrentMode->vcount[vCounter] & 0xff);
 	case 0x41: /* Read VDP H Counter */
 		return hCounter;
 	case 0x80: /* Read VDP Data Port */
@@ -305,8 +296,20 @@ void sms_synchronize(int cycles){
 	run_vdp(vdpCyclesToRun - (cycles * VDP_CLOCK_RATIO));
 	vdpCyclesToRun = cycles * VDP_CLOCK_RATIO;
 	run_sn79489();
-	run_ym2413();
+	if(currentMachine->expansionSound)
+		run_ym2413();
 }
+
+//Input functions
+void sms_pause		(uint8_t buttonDown) { if(buttonDown) z80_nmiPulled = 1; }
+void sms_p1b1		(uint8_t buttonDown) { buttonDown ? (ioPort1 &= ~IO1_PORTA_TL   ) : (ioPort1 |= IO1_PORTA_TL   ); }
+void sms_p1b2		(uint8_t buttonDown) { buttonDown ? (ioPort1 &= ~IO1_PORTA_TR   ) : (ioPort1 |= IO1_PORTA_TR   ); }
+void sms_reset		(uint8_t buttonDown) { buttonDown ? (ioPort2 &= ~IO2_RESET      ) : (ioPort2 |= IO2_RESET      ); }
+void sms_p1up		(uint8_t buttonDown) { buttonDown ? (ioPort1 &= ~IO1_PORTA_UP   ) : (ioPort1 |= IO1_PORTA_UP   ); }
+void sms_p1down		(uint8_t buttonDown) { buttonDown ? (ioPort1 &= ~IO1_PORTA_DOWN ) : (ioPort1 |= IO1_PORTA_DOWN ); }
+void sms_p1left		(uint8_t buttonDown) { buttonDown ? (ioPort1 &= ~IO1_PORTA_LEFT ) : (ioPort1 |= IO1_PORTA_LEFT ); }
+void sms_p1right	(uint8_t buttonDown) { buttonDown ? (ioPort1 &= ~IO1_PORTA_RIGHT) : (ioPort1 |= IO1_PORTA_RIGHT); }
+
 /* trace zexdoc.log,0,noloop,{tracelog "%04x,%04x,%04x,%04x,%04x,%04x,%04x,%04x,",pc,(af&ffd7),bc,de,hl,ix,iy,sp}*/
 /*	logfile = fopen("/home/jonas/git/logfile.txt","w");
 	if (logfile==NULL){

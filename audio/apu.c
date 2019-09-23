@@ -1,16 +1,32 @@
+/*
+ * The NES APU was part of a custom made microchip by Ricoh together with a 6502 (with disabled BCD mode)
+ *
+ * Versions:
+ *
+ * Ricoh RP2A03 - NTSC version
+ * Ricoh RP2A07 - PAL version
+ *
+ * The NTSC and PAL versions contained different clock dividers and different hard-coded sample rates for delta modulation
+ */
+
 #include "apu.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "../nes/globals.h"
 #include "SDL.h"
 #include "../cpu/6502.h"
 #include "../my_sdl.h"
 #include "../video/ppu.h"
 #include "../nes/mapper.h"
+#include "../nes/nesemu.h"
+#include "../jemu.h"
+
+#define FRAC_BITS			16
+
 						/* 	shifted up by 1 to work */
 static uint_fast16_t frameClock[5] = {7457, 14913, 22371, 29829, 37281};
 static uint_fast16_t frameReset[2] = {29830, 37282};
+int cpuClock = NES_NTSC_MASTER / NTSC_CPU_CLOCK_DIV;
 
 static float pulse_table[31] = { 0.0116, 0.0229, 0.0340, 0.0448, 0.0554, 0.0657, 0.0757, 0.0856, 0.0952, 0.1046, 0.1139, 0.1229, 0.1317,
 						   0.1404, 0.1488, 0.1571, 0.1652, 0.1732, 0.1810, 0.1886, 0.1961, 0.2035, 0.2107, 0.2178, 0.2247, 0.2315,
@@ -33,10 +49,11 @@ static float tnd_table[203] =  { 0.0067, 0.0133, 0.0199, 0.0265, 0.0330, 0.0394,
 						   0.7303, 0.7323, 0.7344, 0.7364, 0.7384, 0.7405, 0.7425, 0.7445 };
 static float pulseMixSample = 0, tndMixSample = 0, expSample = 0;
 static uint_fast8_t frameCounter = 0, sweep1Counter = 0, sweep2Counter = 0, env1Decay = 0, env2Decay = 0, envNoiseDecay = 0,
-					triLinear = 0, dmcBitsLeft = 8, dmcShift = 0, pulse1Mute = 0, pulse2Mute = 0, sCount = 0;
+					triLinear = 0, dmcBitsLeft = 8, dmcShift = 0, pulse1Mute = 0, pulse2Mute = 0;
 static int_fast8_t triSeq = 0, triBuff = 0;
-static uint_fast16_t triTemp, noiseTemp, framecc = 0, pulse1Sample = 0, pulse2Sample = 0, triSample = 0, tmpcnt = 0, noiseSample = 0;
+static uint16_t triTemp, noiseTemp, framecc = 0, pulse1Sample = 0, pulse2Sample = 0, triSample = 0, tmpcnt = 0, noiseSample = 0, sampleCounter = 0;
 static int16_t pulse1Temp = 0, pulse2Temp = 0, pulse1Change = 0, pulse2Change = 0;
+static int bufferSize;
 
 uint_fast8_t apuStatus, apuFrameCounter, pulse1Length = 0, pulse2Length = 0, pulse1Control = 0, pulse2Control = 0,
 		     sweep1Divide = 0, sweep1Reload = 0, env1Start = 0, env2Start = 0, envNoiseStart = 0, env1Divide = 0,
@@ -45,25 +62,37 @@ uint_fast8_t apuStatus, apuFrameCounter, pulse1Length = 0, pulse2Length = 0, pul
 			 dmcOutput = 0, dmcControl = 0, dmcSilence = 1, dmcRestart = 0;
 int_fast8_t pulse1Duty = 0, pulse2Duty = 0;
 int_fast16_t pulse2Timer = 0, pulse1Timer = 0;
-uint_fast16_t sampleCounter = 0, triTimer = 0, noiseShift, noiseTimer,
+uint_fast16_t triTimer = 0, noiseShift, noiseTimer,
 		dmcRate = 0, dmcAddress, dmcCurAdd, dmcLength = 0, dmcBytesLeft = 0, dmcTemp;
-float sampleBuffer[BUFFER_SIZE] = {0};
+static float *sampleBuffer = NULL;
 uint32_t apucc = 0;
 
-float sampleRate, originalSampleRate;
-const int samplesPerSecond = 48000;
+static uint32_t sampleRate, originalSampleRate;
 uint_fast8_t lengthTable[0x20] = { 10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14,
 		12, 26, 14, 12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32,
 		30 };
-static uint_fast8_t dutySequence[4][8] = { { 0, 0, 0, 0, 0, 0, 0, 1 },
-							   { 0, 0, 0, 0, 0, 0, 1, 1 },
-							   { 0, 0, 0, 0, 1, 1, 1, 1 },
-							   { 1, 1, 1, 1, 1, 1, 0, 0 } };
+static uint8_t dutySequence[4][8] =
+	{ { 0, 0, 0, 0, 0, 0, 0, 1 },
+	  { 0, 0, 0, 0, 0, 0, 1, 1 },
+	  { 0, 0, 0, 0, 1, 1, 1, 1 },
+	  { 1, 1, 1, 1, 1, 1, 0, 0 } };
 static uint_fast8_t triSequence[0x20] = { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 uint_fast16_t noiseTable[0x10] = { 4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068};
-uint_fast16_t rateTable[0x10] = { 428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54 };
+uint_fast16_t dmcRateTable[0x02][0x10] = { { 428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54 },
+										   { 398, 354, 316, 298, 276, 236, 210, 198, 176, 148, 132, 118,  98,  78,  66,  50 } };
 uint_fast8_t dmcInt = 0, frameInt = 0, frameWriteDelay, frameWrite = 0;
-static int samplesPerSec = 0;
+
+void init_apu(int buffer){
+	bufferSize = buffer;
+	if(sampleBuffer != NULL)
+		free(sampleBuffer);
+	sampleBuffer = malloc(bufferSize * sizeof(float));
+}
+
+void set_timings_apu(int div, int clock){
+	originalSampleRate = sampleRate = ((uint64_t)clock << FRAC_BITS) / div;
+	sampleCounter = 0;
+}
 
 void run_apu(uint_fast16_t ntimes) { /* apu cycle times */
 	while (ntimes) {
@@ -207,31 +236,26 @@ void run_apu(uint_fast16_t ntimes) { /* apu cycle times */
 			expSample += (expansion_sound() / 60);
 
 		tmpcnt++;
-		if (tmpcnt==(int)sampleRate) {
-			sCount++;
-			samplesPerSec++;
-			if (sCount==7)
-				sCount = 0;
+		if (tmpcnt == (sampleRate >> FRAC_BITS)) {
 			if (expSound)
 				sampleBuffer[sampleCounter++] = ((pulseMixSample/tmpcnt) + (tndMixSample/tmpcnt) + (expSample/tmpcnt)) / 2;
 			else
 				sampleBuffer[sampleCounter++] = (pulseMixSample/tmpcnt) + (tndMixSample/tmpcnt);
-			//if (sampleCounter == BUFFER_SIZE)
-				//output_sound();
+			if (sampleCounter == bufferSize){
+				output_sound(sampleBuffer, sampleCounter);
+				sampleCounter = 0;
+			}
 			pulseMixSample = 0;
 			tndMixSample = 0;
 			expSample = 0;
-			sampleRate = (float)(originalSampleRate + sampleRate - tmpcnt);
+			sampleRate = (originalSampleRate + sampleRate - (tmpcnt << FRAC_BITS));
 			tmpcnt = 0;
 		}
 		ntimes--;
 		apu_wait--;
 		framecc++;
 		if (apucc == cpuClock)
-		{
 			apucc = 0;
-			samplesPerSec = 0;
-		}
 		apucc++;
 	}
 }
@@ -284,7 +308,7 @@ void dmc_fill_buffer () {
 	/*	cpuStall = 1;
 		apu_wait += 6;
 		ppu_wait += (6*3); */
-		dmcShift = cpuread(dmcCurAdd);
+		dmcShift = _6502_cpuread(dmcCurAdd);
 		if (dmcCurAdd == 0xffff)
 			dmcCurAdd = 0x8000;
 		else

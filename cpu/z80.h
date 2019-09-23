@@ -10,7 +10,7 @@ uint8_t * (*read_z80_memory)(uint16_t);
 void (*write_z80_memory)(uint16_t, uint8_t);
 uint8_t (*read_z80_register)(uint8_t);
 void (*write_z80_register)(uint8_t, uint8_t);
-void (*addcycles)(uint8_t);
+void (*z80_addcycles)(uint8_t);
 void (*z80_synchronize)(int);
 
 extern uint8_t z80_irqPulled, z80_nmiPulled;

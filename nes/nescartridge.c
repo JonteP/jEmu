@@ -1,5 +1,4 @@
 #include "nescartridge.h"
-
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>	/* malloc; exit */
@@ -7,33 +6,34 @@
 #include "parser.h"
 #include "tree.h"
 #include "sha.h"
-#include "globals.h"
+#include "nesemu.h"
 
 static inline void extract_xml_data(xmlNode * s_node), xml_hash_compare(xmlNode * c_node), parse_xml_file(xmlNode * a_node),
 				   load_by_header();
 
 /* iNES */
-const uint_fast8_t id[4] = { 0x4e, 0x45, 0x53, 0x1a };
-uint_fast8_t header[0x10];
+const uint8_t id[4] = { 0x4e, 0x45, 0x53, 0x1a };
+uint8_t header[0x10];
 
 /* XML */
 xmlDoc *nesXml;
 xmlNode *root;
-xmlChar *sphash, *schash;
-uint_fast8_t hashMatch = 0;
+xmlChar *sphash = NULL, *schash = NULL;
+uint8_t hashMatch = 0;
 
 /* common cartridge related */
 gameInfos gameInfo;
 gameFeatures cart;
 int psize, csize;
 unsigned char phash[SHA_DIGEST_LENGTH], chash[SHA_DIGEST_LENGTH];
-uint_fast8_t *prg, *chrRom, *chrRam, *bwram, *wram, wramEnable = 0, *wramSource;
+uint8_t *prg = NULL, *chrRom = NULL, *chrRam = NULL, *bwram = NULL, *wram = NULL, wramEnable = 0, *wramSource = NULL;
 FILE *romFile, *bwramFile;
 char *bwramName;
-uint_fast8_t mirroring[4][4] = { { 0, 0, 1, 1 }, 	/* horizontal mirroring 	*/
-							{ 0, 1, 0, 1 }, 	/* vertical mirroring 		*/
-							{ 0, 0, 0, 0 },		/* one screen, low page 	*/
-							{ 1, 1, 1, 1 } };	/* one screen, high page 	*/
+uint_fast8_t mirroring[4][4] =
+	{ { 0, 0, 1, 1 }, 	// horizontal mirroring
+	  { 0, 1, 0, 1 }, 	// vertical mirroring
+	  { 0, 0, 0, 0 },	// one screen, low page
+	  { 1, 1, 1, 1 } };	// one screen, high page
 
 /* horizontal:
  * nameSlot[0] = ciram;
@@ -42,59 +42,51 @@ uint_fast8_t mirroring[4][4] = { { 0, 0, 1, 1 }, 	/* horizontal mirroring 	*/
  * nameSlot[3] = ciram + 0x400;
  */
 
-void nes_load_rom(char *rom)
-{
-	romFile = fopen(rom, "r");
-	if (romFile == NULL) {
+void nes_load_rom(char *rom){
+	cart.bwramSize = cart.chrSize = cart.cramSize = cart.prgSize = 0;
+	if ((romFile = fopen(rom, "r")) == NULL) {
 		printf("Error: No such file\n");
 		exit(EXIT_FAILURE);
 	}
-
 	const char *ext = strrchr(rom, '.') + 1;
-	if (!strcmp(ext,"nes"))
-	{
+	if (!strcmp(ext,"nes")){
 		/* if file has .nes extension */
 		fread(header, sizeof(header), 1, romFile);
-		for (int i = 0; i < sizeof(id); i++)
-		{
-			if (header[i] != id[i])
-			{
+		for (int i = 0; i < sizeof(id); i++){
+			if (header[i] != id[i]){
 				fprintf(stderr,"Error: Invalid iNES header!\n");
 				exit(EXIT_FAILURE);
 			}
 		}
 		/* read data from ROM */
-		psize = header[4] * PRG_BANK<<2;
-		csize = header[5] * CHR_BANK<<3;
+		psize = header[4] * PRG_BANK << 2;
+		csize = header[5] * CHR_BANK << 3;
 	}
-
-	prg = malloc(psize);
+	free(prg);
+	prg = malloc(psize * sizeof(uint8_t));
 	fread(prg, psize, 1, romFile);
 	SHA1(prg,psize,phash);
-
-	sphash = malloc(SHA_DIGEST_LENGTH*2+1);
-	for (int i = 0; i<sizeof(phash); i++)
-	{
+	free(sphash);
+	sphash = malloc(SHA_DIGEST_LENGTH * 2 + 1);
+	for (int i = 0; i<sizeof(phash); i++){
 		sprintf((char *)sphash+i*2, "%02x", phash[i]);
 	}
-	nesXml = xmlReadFile("/home/jonas/git/nesemu0.2/Debug/nes.xml", NULL, 0);
+	nesXml = xmlReadFile("softlist/nes.xml", NULL, 0);
 	root = xmlDocGetRootElement(nesXml);
 	parse_xml_file(root);
 	xmlFreeDoc(nesXml);
 	xmlCleanupParser();
 
-	if (!hashMatch) {
+	if (!hashMatch)
 		load_by_header();
-	}
-
-	if (cart.chrSize)
-	{
-		chrRom = malloc(cart.chrSize);
+	if (cart.chrSize){
+		free(chrRom);
+		chrRom = malloc(cart.chrSize * sizeof(uint8_t));
 		fread(chrRom, cart.chrSize, 1, romFile);
 	}
-	if (cart.cramSize)
-	{
-		chrRam = malloc(cart.cramSize);
+	if (cart.cramSize){
+		free(chrRam);
+		chrRam = malloc(cart.cramSize * sizeof(uint8_t));
 	}
 	fclose(romFile);
 
@@ -103,18 +95,20 @@ void nes_load_rom(char *rom)
 	cart.pSlots = ((cart.prgSize) / 0x1000);
 	cart.cSlots = ((cart.chrSize) / 0x400);
 
-	if (cart.bwramSize) {
+	if (cart.bwramSize){
 		bwramName = strdup(rom);
 		sprintf(bwramName+strlen(bwramName)-3,"sav");
 		bwramFile = fopen(bwramName, "r");
-		bwram = malloc(cart.bwramSize);
-		if (bwramFile) {
+		free(bwram);
+		bwram = malloc(cart.bwramSize * sizeof(uint8_t));
+		if (bwramFile){
 			fread(bwram, cart.bwramSize, 1, bwramFile);
 			fclose(bwramFile);
 		}
 		wramSource = bwram;
 		wramEnable = 1;
-	} else if (cart.wramSize) {
+	} else if (cart.wramSize){
+		free(wram);
 		wram = malloc(cart.wramSize);
 		wramSource = wram;
 		wramEnable = 1;
@@ -128,32 +122,27 @@ void nes_load_rom(char *rom)
 	printf("CHRRAM size: %li bytes\n",cart.cramSize);
 }
 
-void nes_close_rom()
-{
+void nes_close_rom(){
 	free(prg);
 	if (cart.chrSize)
 		free(chrRom);
 	if (cart.cramSize)
 		free(chrRam);
-	if (cart.bwramSize) {
+	if (cart.bwramSize){
 		bwramFile = fopen(bwramName, "w");
 		fwrite(bwram,cart.bwramSize,1,bwramFile);
 		free(bwram);
 		fclose(bwramFile);
-	} else if (cart.wramSize) {
+	} else if (cart.wramSize)
 		free(wram);
-	}
 }
 
-void set_wram()
-{
-	if (header[6] & 0x02)
-	{
+void set_wram(){
+	if (header[6] & 0x02){
 		cart.wramSize = 0;
 		cart.bwramSize = 0x2000;
 	}
-	else
-	{
+	else{
 		cart.wramSize = 0x2000;
 		cart.bwramSize = 0;
 	}
@@ -161,16 +150,14 @@ void set_wram()
 
 void load_by_header()
 {
-	uint_fast8_t mapper = ((header[7] & 0xf0) | ((header[6] & 0xf0) >> 4));
+	uint8_t mapper = ((header[7] & 0xf0) | ((header[6] & 0xf0) >> 4));
 	printf("Mapper: %i\n",mapper);
 	cart.prgSize = psize;
-	if (csize)
-	{
+	if (csize){
 		cart.chrSize = csize;
 		cart.cramSize = 0;
 	}
-	else
-	{
+	else{
 		cart.chrSize = 0;
 		cart.cramSize = 0x2000;
 	}
@@ -178,8 +165,7 @@ void load_by_header()
 		cart.mirroring = 4;
 	else
 		cart.mirroring = (header[6] & 0x01);
-	switch (mapper)
-	{
+	switch (mapper){
 	case 0:
 		sprintf(cart.slot,"%s","nrom");
 		break;
@@ -209,17 +195,14 @@ void load_by_header()
 	default:
 		fprintf(stderr,"Error: Unknown mapper (%i)!",mapper);
 		exit(EXIT_FAILURE);
-
 	}
-
-
 }
 
-void extract_xml_data(xmlNode * s_node) {
+void extract_xml_data(xmlNode * s_node){
 	xmlNode *cur_node = s_node->children;
 	xmlChar *nam, *val;
-	while (cur_node) {
-		if (cur_node->type == XML_ELEMENT_NODE && !xmlStrcmp(cur_node->name, (xmlChar *)"feature")) {
+	while (cur_node){
+		if (cur_node->type == XML_ELEMENT_NODE && !xmlStrcmp(cur_node->name, (xmlChar *)"feature")){
 			nam = xmlGetProp(cur_node, (xmlChar *)"name");
 			val = xmlGetProp(cur_node, (xmlChar *)"value");
 			if (!xmlStrcmp(nam,(xmlChar *)"slot"))
@@ -283,8 +266,7 @@ void extract_xml_data(xmlNode * s_node) {
 	}
 }
 
-void xml_hash_compare(xmlNode * c_node)
-{
+void xml_hash_compare(xmlNode * c_node){
 	xmlNode *cur_node = NULL;
 	xmlChar *hashkey;
 	for (cur_node = c_node; cur_node; cur_node = cur_node->next) {
@@ -298,11 +280,9 @@ void xml_hash_compare(xmlNode * c_node)
 		}
 	}
 }
-void parse_xml_file(xmlNode * a_node)
-{
+void parse_xml_file(xmlNode * a_node){
 	xmlNode *cur_node = NULL;
 	xmlChar *key;
-
     for (cur_node = a_node; cur_node; cur_node = cur_node->next) {
     	if (cur_node->type == XML_ELEMENT_NODE && !xmlStrcmp(cur_node->name, (const xmlChar *) "dataarea")) {
     		key = xmlGetProp(cur_node, (xmlChar *)"name");
