@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <math.h>
+//#include <math.h>
 #include "../my_sdl.h"
 #include"../sms/smsemu.h"
 
@@ -19,6 +19,7 @@
 #define ATTENUATION_MAX			127
 #define ATTENUATION_MIN			0
 #define	ATTENUATION_SILENT		124
+#define M_PI					(3.14159265358979323846)
 
 static uint8_t instruments[0x10][0x8] =	{ /* Inaccurate, based on MAME code */
 	{0x49, 0x4c, 0x4c, 0x12, 0x00, 0x00, 0x00, 0x00 },  /* 0. Custom 			*/
@@ -98,7 +99,7 @@ void init_ym2413(int buffer){
 		channels[i]->car.envelope = 127;
 	}
     for (int i = 0; i < 256; ++i) {
-        logSine[i] = round(-log2(sin((i + 0.5) * M_PI_2 / 256.0)) * 256.0);//12bit range
+        logSine[i] = round(-log2(sin((i + 0.5) * (M_PI / 2) / 256.0)) * 256.0);//12bit range
         expTab[i] = round(exp2(i / 256.0) * 1024.0) - 1024;//10bit range
     }
 }

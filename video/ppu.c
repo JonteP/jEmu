@@ -304,21 +304,18 @@ void tfNT ()
 	ntData = *ppuread(a);
 
 }
-void tfAT ()
-{
+void tfAT () {
 	uint_fast16_t a = (0x23c0 | (ppuV & 0xc00) | ((ppuV >> 4) & 0x38) | ((ppuV >> 2) & 0x07));
 	bgData = *ppuread(a);
 	attData = ((bgData >> ((((ppuV >> 1) & 1) | ((ppuV >> 5) & 2)) << 1)) & 3);
 
 }
-void tfLT ()
-{
+void tfLT () {
 	uint_fast16_t a = ((ntData << 4) + ((ppuController & 0x10) << 8) + ((ppuV >> 12) & 7));
 	tileLow = *ppuread(a);
 
 }
-void tfHT ()
-{
+void tfHT () {
 	uint_fast16_t a = ((ntData << 4) + ((ppuController & 0x10) << 8) + ((ppuV >> 12) & 7) + 8);
 	tileHigh = *ppuread(a);
 	toggle_a12(a);
@@ -385,18 +382,14 @@ if (ppuMask & 0x18)
 		ppuV++; /* next tile */
 	}
 }
-void vINC()
-{
-	if (ppuMask & 0x18)
-	{
+void vINC() {
+	if (ppuMask & 0x18)	{
 		if ((ppuV & 0x7000) != 0x7000)
 			ppuV += 0x1000;
-		else
-		{
+		else {
 			ppuV &= ~0x7000;
 			uint_fast8_t coarseY = ((ppuV & 0x3e0) >> 5);
-			if (coarseY == 29)
-			{
+			if (coarseY == 29) {
 				coarseY = 0;
 				ppuV ^= 0x0800;
 			} else if (coarseY == 31)
@@ -408,8 +401,7 @@ void vINC()
 	}
 }
 
-void reload_tile_shifter()
-{
+void reload_tile_shifter() {
 	tileShifterLow = ((tileShifterLow & 0xff00) | tileLow);
 	tileShifterHigh = ((tileShifterHigh & 0xff00) | tileHigh);
 	attShifterLow = ((attShifterLow & 0xff00) | ((attData & 1) ? 0xff : 0x00));
@@ -427,13 +419,11 @@ void ppu_render()
  */
 	if (ppudot >= 1 && ppudot <= 257) /* tile data fetch */
 	{
-		if (ppudot <=256)
-		{
+		if (ppudot <=256) {
 		if (ppudot%8 == 2)
 			reload_tile_shifter();
 		}
-		if (ppudot >=2)
-		{
+		if (ppudot >=2) {
 		uint_fast8_t pValue;
 		int16_t cDot = ppudot - 2;
 		pValue = ((attShifterHigh >> (12 - ppuX)) & 8) | ((attShifterLow >> (13 - ppuX)) & 4) | ((tileShifterHigh >> (14 - ppuX)) & 2) | ((tileShifterLow >> (15 - ppuX)) & 1);
@@ -483,18 +473,15 @@ void ppu_render()
 	}
 }
 
-void horizontal_t_to_v()
-{
+void horizontal_t_to_v() {
 	if (ppuMask & 0x18)
 	{
 	ppuV = (ppuV & 0xfbe0) | (ppuT & 0x41f); /* reset x scroll */
 	}
 }
 
-void vertical_t_to_v()
-{
-	if (ppuMask & 0x18)
-	{
+void vertical_t_to_v() {
+	if (ppuMask & 0x18)	{
 	ppuV = (ppuV & 0x841f) | (ppuT & 0x7be0); /* reset Y scroll */
 	}
 }
@@ -728,10 +715,10 @@ void write_ppu_register(uint_fast16_t addr, uint_fast8_t tmpval8) {
 		{
 			ppuData = tmpval8;
 			if ((ppuV & 0x3fff) >= 0x3f00)
-				ppuwrite((ppuV & 0x3fff),(ppuData & 0x3f));
+				ppuwrite((ppuV & 0x3fff), (ppuData & 0x3f));
 			else
 			{
-				ppuwrite((ppuV & 0x3fff),ppuData);
+				ppuwrite((ppuV & 0x3fff), ppuData);
 			}
 			ppuV += (ppuController & 0x04) ? 32 : 1;
 			toggle_a12(ppuV);
@@ -749,10 +736,10 @@ uint_fast8_t * ppuread(uint_fast16_t address)
 {
 	if (address < 0x2000) /* pattern tables */
 	{
-		return &chrSlot[(address>>10)][address&0x3ff];
+		return &chrSlot[(address >> 10)][address & 0x3ff];
 	}
-	else if (address >= 0x2000 && address <0x3f00) /* nametables */
-		return &nameSlot[(address>>10) & 3][address&0x3ff];
+	else if (address >= 0x2000 && address < 0x3f00) /* nametables */
+		return &nameSlot[(address >> 10) & 3][address & 0x3ff];
 	else if (address >= 0x3f00) { /* palette RAM */
 		if (address == 0x3f10)
 			address = 0x3f00;
@@ -762,19 +749,18 @@ uint_fast8_t * ppuread(uint_fast16_t address)
 			address = 0x3f08;
 		else if (address == 0x3f1c)
 			address = 0x3f0c;
-		return &palette[(address&0x1f)];
+		return &palette[(address & 0x1f)];
 	}
 	return 0;
 }
 
 void ppuwrite(uint_fast16_t address, uint_fast8_t value) {
-	if (address < 0x2000) /* pattern tables */
-	{
-		if (chrSource[(address>>10)] == CHR_RAM)
-			chrSlot[(address>>10)][address&0x3ff] = value;
+	if (address < 0x2000) { /* pattern tables */
+		if (chrSource[(address >> 10)] == CHR_RAM)
+			chrSlot[(address >> 10)][address & 0x3ff] = value;
 	}
-	else if (address >= 0x2000 && address <0x3f00) /* nametables */
-		nameSlot[(address>>10) & 3][address&0x3ff] = value;
+	else if (address >= 0x2000 && address < 0x3f00) /* nametables */
+		nameSlot[(address >> 10) & 3][address & 0x3ff] = value;
 	else if (address >= 0x3f00) { /* palette RAM */
 		if (address == 0x3f10)
 			address = 0x3f00;
@@ -784,7 +770,7 @@ void ppuwrite(uint_fast16_t address, uint_fast8_t value) {
 			address = 0x3f08;
 		else if (address == 0x3f1c)
 			address = 0x3f0c;
-		palette[(address&0x1f)] = value;
+		palette[(address & 0x1f)] = value;
 	}
 }
 

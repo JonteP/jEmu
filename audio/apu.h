@@ -18,6 +18,6 @@ extern uint_fast16_t noiseTable[0x10], dmcRateTable[0x02][0x10], triTimer, noise
 extern uint_fast8_t lengthTable[0x20];
 extern uint32_t frameIrqDelay, apucc, frameIrqTime;
 extern const int samplesPerSecond;
-void run_apu(uint_fast16_t), dmc_fill_buffer(void), quarter_frame(void), half_frame(void), init_apu(int), set_timings_apu(int, int);
+void run_apu(uint16_t), dmc_fill_buffer(void), quarter_frame(void), half_frame(void), init_apu(int), set_timings_apu(int, int);
 
 #endif /* APU_H_ */

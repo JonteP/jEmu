@@ -94,7 +94,7 @@ void set_timings_apu(int div, int clock){
 	sampleCounter = 0;
 }
 
-void run_apu(uint_fast16_t ntimes) { /* apu cycle times */
+void run_apu(uint16_t ntimes) { /* apu cycle times */
 	while (ntimes) {
 		if (frameWrite) {
 			if (!frameWriteDelay) {

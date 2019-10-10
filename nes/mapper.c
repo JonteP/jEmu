@@ -7,11 +7,12 @@
 #include "../video/ppu.h"
 #include "nescartridge.h"
 #include "nesemu.h"
+#include "fds.h"
 
 uint_fast8_t mapperInt = 0, expSound = 0,
 			 prgBank[8], chrBank[8];
 chrtype_t chrSource[0x8];
-static inline void nametable_mirroring(uint_fast8_t), null_irq(), write_null(uint_fast16_t, uint_fast8_t);
+static inline void null_irq(), write_null(uint_fast16_t, uint_fast8_t);
 static inline uint_fast8_t read_null(uint_fast16_t);
 
 /*-----------------------------------NINTENDO------------------------------------*/
@@ -24,7 +25,7 @@ static inline uint_fast8_t read_null(uint_fast16_t);
  *
  * -bus conflicts
  *
- * */
+ */
 static inline void mapper_cnrom(uint_fast16_t, uint_fast8_t);
 
 void mapper_cnrom (uint_fast16_t address, uint_fast8_t value) {
@@ -2455,10 +2456,8 @@ void mapper_x1005(uint_fast16_t address, uint_fast8_t value)
 
 /*----------------------------------------------------------------------------*/
 
-void reset_default()
-{
-	if (cart.chrSize)
-	{
+void reset_default(){
+	if (cart.chrSize){
 		chrSource[0] = CHR_ROM;
 		chrSource[1] = CHR_ROM;
 		chrSource[2] = CHR_ROM;
@@ -2468,8 +2467,7 @@ void reset_default()
 		chrSource[6] = CHR_ROM;
 		chrSource[7] = CHR_ROM;
 	}
-	else
-	{
+	else{
 		chrSource[0] = CHR_RAM;
 		chrSource[1] = CHR_RAM;
 		chrSource[2] = CHR_RAM;
@@ -2501,20 +2499,26 @@ void reset_default()
 	nametable_mirroring(cart.mirroring);
 }
 
-void prg_bank_switch()
-{
-	prgSlot[0] = &prg[((prgBank[0] & (cart.pSlots - 1)) << 12)];
-	prgSlot[1] = &prg[((prgBank[1] & (cart.pSlots - 1)) << 12)];
-	prgSlot[2] = &prg[((prgBank[2] & (cart.pSlots - 1)) << 12)];
-	prgSlot[3] = &prg[((prgBank[3] & (cart.pSlots - 1)) << 12)];
-	prgSlot[4] = &prg[((prgBank[4] & (cart.pSlots - 1)) << 12)];
-	prgSlot[5] = &prg[((prgBank[5] & (cart.pSlots - 1)) << 12)];
-	prgSlot[6] = &prg[((prgBank[6] & (cart.pSlots - 1)) << 12)];
-	prgSlot[7] = &prg[((prgBank[7] & (cart.pSlots - 1)) << 12)];
+
+//TODO: extend to be 6502 memory map
+void prg_bank_switch(){
+	if(cart.prgSize){
+		prgSlot[0] = &prg[((prgBank[0] & (cart.pSlots - 1)) << 12)];
+		prgSlot[1] = &prg[((prgBank[1] & (cart.pSlots - 1)) << 12)];
+		prgSlot[2] = &prg[((prgBank[2] & (cart.pSlots - 1)) << 12)];
+		prgSlot[3] = &prg[((prgBank[3] & (cart.pSlots - 1)) << 12)];
+		prgSlot[4] = &prg[((prgBank[4] & (cart.pSlots - 1)) << 12)];
+		prgSlot[5] = &prg[((prgBank[5] & (cart.pSlots - 1)) << 12)];
+		prgSlot[6] = &prg[((prgBank[6] & (cart.pSlots - 1)) << 12)];
+		prgSlot[7] = &prg[((prgBank[7] & (cart.pSlots - 1)) << 12)];
+	}else{
+		prgSlot[6] = &fdsBiosRom[0];
+		prgSlot[7] = &fdsBiosRom[0x1000];
+	}
 }
 
-void chr_bank_switch()
-{
+//This is PPU memory map
+void chr_bank_switch(){
 	chrSlot[0] = (chrSource[0] == CHR_RAM) ? &chrRam[((chrBank[0] & ((cart.cramSize >> 10) - 1)) << 10)] : &chrRom[((chrBank[0] & ((cart.chrSize >> 10) - 1)) << 10)];
 	chrSlot[1] = (chrSource[1] == CHR_RAM) ? &chrRam[((chrBank[1] & ((cart.cramSize >> 10) - 1)) << 10)] : &chrRom[((chrBank[1] & ((cart.chrSize >> 10) - 1)) << 10)];
 	chrSlot[2] = (chrSource[2] == CHR_RAM) ? &chrRam[((chrBank[2] & ((cart.cramSize >> 10) - 1)) << 10)] : &chrRom[((chrBank[2] & ((cart.chrSize >> 10) - 1)) << 10)];
@@ -2525,10 +2529,8 @@ void chr_bank_switch()
 	chrSlot[7] = (chrSource[7] == CHR_RAM) ? &chrRam[((chrBank[7] & ((cart.cramSize >> 10) - 1)) << 10)] : &chrRom[((chrBank[7] & ((cart.chrSize >> 10) - 1)) << 10)];
 }
 
-void nametable_mirroring(uint_fast8_t mode)
-{
-	switch (mode)
-	{
+void nametable_mirroring(uint8_t mode){
+	switch (mode){
 	case 0: /* horizontal */
 		nameSlot[0] = ciram;
 		nameSlot[1] = ciram;
@@ -2567,7 +2569,7 @@ void null_irq() {}
 void write_null(uint_fast16_t address, uint_fast8_t value) {}
 uint_fast8_t read_null(uint_fast16_t address) {return 0;}
 
-void init_mapper() {
+void init_mapper(){
 	reset_default();
 	irq_cpu_clocked = &null_irq;
 	irq_ppu_clocked = &null_irq;
@@ -2575,15 +2577,15 @@ void init_mapper() {
 	write_mapper_register4 = &write_null;
 	write_mapper_register6 = &write_null;
 	write_mapper_register8 = &write_null;
-	if(!strcmp(cart.slot,"sxrom") ||
-				!strcmp(cart.slot,"sxrom_a") ||
-					!strcmp(cart.slot,"sorom") ||
-						!strcmp(cart.slot,"sorom_a")) {
-		if ((cart.wramSize+cart.bwramSize) && (!strcmp(cart.mmc1_type,"MMC1A") ||
-				!strcmp(cart.mmc1_type,"MMC1B1") ||
-					!strcmp(cart.mmc1_type,"MMC1B1-H") ||
-						!strcmp(cart.mmc1_type,"MMC1B2") ||
-							!strcmp(cart.mmc1_type,"MMC1B3"))) {
+	if(!strcmp(cart.slot,"sxrom")   ||
+	   !strcmp(cart.slot,"sxrom_a") ||
+	   !strcmp(cart.slot,"sorom")   ||
+	   !strcmp(cart.slot,"sorom_a"))  {
+		if ((cart.wramSize+cart.bwramSize) && (!strcmp(cart.mmc1_type,"MMC1A")    ||
+											   !strcmp(cart.mmc1_type,"MMC1B1")   ||
+											   !strcmp(cart.mmc1_type,"MMC1B1-H") ||
+											   !strcmp(cart.mmc1_type,"MMC1B2")   ||
+											   !strcmp(cart.mmc1_type,"MMC1B3")))   {
 			wramEnable = 1;
 		}
 		write_mapper_register8 = &mapper_mmc1;

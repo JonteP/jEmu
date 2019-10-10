@@ -44,7 +44,7 @@ uint_fast8_t mirroring[4][4] =
 
 void nes_load_rom(char *rom){
 	cart.bwramSize = cart.chrSize = cart.cramSize = cart.prgSize = 0;
-	if ((romFile = fopen(rom, "r")) == NULL) {
+	if ((romFile = fopen(rom, "r")) == NULL){
 		printf("Error: No such file\n");
 		exit(EXIT_FAILURE);
 	}
@@ -58,7 +58,6 @@ void nes_load_rom(char *rom){
 				exit(EXIT_FAILURE);
 			}
 		}
-		/* read data from ROM */
 		psize = header[4] * PRG_BANK << 2;
 		csize = header[5] * CHR_BANK << 3;
 	}

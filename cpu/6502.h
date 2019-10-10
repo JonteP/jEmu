@@ -22,7 +22,6 @@ uint8_t (*_6502_cpuread)(uint16_t);
 void (*_6502_cpuwrite)(uint16_t, uint8_t);
 
 extern uint_fast8_t dummywrite, irqPulled, nmiPulled, cpuStall;
-extern uint_fast8_t *prgSlot[0x8], cpuRam[0x800];
 extern uint_fast8_t cpuA, cpuX, cpuY, cpuP, cpuS;
 extern uint16_t cpuPC;
 extern uint32_t cpucc;

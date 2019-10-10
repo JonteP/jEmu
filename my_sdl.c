@@ -22,6 +22,7 @@
 #include "cpu/z80.h"
 #include "sms/smscartridge.h"
 #include "jemu.h"
+#include "nes/fds.h"
 
 #define RENDER_FLAGS	(SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE)
 
@@ -131,8 +132,10 @@ void destroy_handle (windowHandle *handle){
 		SDL_DestroyTexture(handle->tex);
 	if(handle->rend)
 		SDL_DestroyRenderer(handle->rend);
-	if(handle->win)
+	if(handle->win) {
+	    SDL_GetWindowPosition(handle->win, &handle->winXPosition, &handle->winYPosition);
 		SDL_DestroyWindow(handle->win);
+	}
 }
 
 void close_sdl(){
@@ -695,6 +698,16 @@ void game_io(){
 		switch (event.type){
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.scancode){
+			case SDL_SCANCODE_SPACE:
+			    if (!(event.key.repeat)) {
+			        diskSide ^= 1;
+			    }
+			    break;
+            case SDL_SCANCODE_LALT:
+                if (!(event.key.repeat)) {
+                    diskFlag ^= 1;
+                }
+                break;
 			case SDL_SCANCODE_1:
 				channelMask ^= 1;
 				break;

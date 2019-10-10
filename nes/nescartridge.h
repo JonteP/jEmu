@@ -3,18 +3,26 @@
 
 #include <stdint.h>
 
+typedef enum mirrorMode {
+    H_MIRROR = 0,
+    V_MIRROR = 1,
+    ONELOW_MIRROR = 2,
+    ONEHIGH_MIRROR = 3,
+} MirrorMode;
+
 typedef struct gameInfos_ {
 	char *title;
 	char *year;
 	char *publisher;
 	char *serial;
 } gameInfos;
+
 typedef struct gameFeatures_ {
 	char slot[20];
 	char pcb[30];
-	uint_fast8_t mirroring;
-	uint_fast8_t pSlots;
-	uint_fast8_t cSlots;
+	MirrorMode mirroring;
+	uint8_t pSlots;
+	uint8_t cSlots;
 	long chrSize;
 	long prgSize;
 	long wramSize;

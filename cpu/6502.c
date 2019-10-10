@@ -41,9 +41,6 @@ static inline void adc(), ahx(), alr(), and(), anc(), arr(), asl(), asli(), axs(
 uint_fast8_t mode, opcode, addmode, tmpval8, dummy, pcl, pch, dummywrite = 0, op, irqPulled = 0, nmiPulled = 0, irqPending = 0, nmiPending = 0, intDelay = 0;
 uint16_t addr, tmpval16;
 
-/* Mapped memory */
-uint_fast8_t *prgSlot[0x8], cpuRam[0x800];
-
 /* Internal registers */
 uint_fast8_t cpuA = 0x00, cpuX = 0x00, cpuY = 0x00, cpuP = 0x00, cpuS = 0x00;
 uint16_t cpuPC;
@@ -892,7 +889,6 @@ void interrupt_handle(interrupt_t x) {
 }
 
 void power_reset () {
-	init_mapper();
 	/* same SP accesses as in the IRQ routine */
 	cpuS--;
 	cpuS--;

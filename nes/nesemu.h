@@ -17,11 +17,12 @@
 
 extern uint_fast8_t  ctrb, ctrb2, ctr1, ctr2, nmiPulled, openBus;
 extern uint_fast8_t  quit;
-extern uint32_t vdp_wait, apu_wait;
+extern uint8_t *prgSlot[0x8], cpuRam[0x800];
+extern uint32_t vdp_wait, apu_wait, fds_wait;
 extern int32_t ppucc;
 extern const float originalFps, originalCpuClock, cyclesPerFrame;
 extern float fps;
-extern struct machine nes_ntsc,	nes_pal, famicom;
+extern struct machine nes_ntsc,	nes_pal, famicom, fds;
 
 void save_state(), load_state();
 int nesemu();
