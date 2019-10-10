@@ -32,7 +32,7 @@ static uint8_t fdsHeader[FDS_HEADER_SIZE], *diskData = NULL, irqEnabled = 0, dis
 FILE *biosFile, *diskFile;
 char bios[PATH_MAX], disk[PATH_MAX];
 uint8_t *fdsBiosRom = NULL, fdsRam[0x8000], *fdsDisk = NULL, diskStatus0 = 0, diskSide = 0, numSides = 0, *tmpDisk, scanningDisk = 0, diskFlag = 0;
-static uint8_t irqRepeat, enableDiskReg, enableSoundReg, protectFlag = 0, extOutput;
+static uint8_t irqRepeat, enableDiskReg, enableSoundReg, protectFlag = 0, extOutput, diskInt = 0;
 static uint16_t irqReload, irqCounter, readPosition;
 static uint32_t delay = 0;
 
@@ -124,14 +124,19 @@ void reconstruct_disk(uint8_t *source, uint8_t *dest) {
 
 uint8_t read_fds_register(uint16_t address) {
 	switch (address) {
-	case 0x4030://FDS: Disk Status Register 0
-	    mapperInt = 0;
-	    uint8_t ret = ((enableDiskReg ? 0x80 : 0x00) | (endOfHead ? 0x40 : 0x00) | mapperInt | (transferFlag ? 0x02 : 0x00));
+	case 0x4030: ;//FDS: Disk Status Register 0
+	    uint8_t ret = ((enableDiskReg ? 0x80 : 0x00) |
+	                       (endOfHead ? 0x40 : 0x00) |
+	                     //  (crcFail ? 0x10 : 0x00) |
+	                    (transferFlag ? 0x02 : 0x00) |
+	                                        mapperInt);
+        mapperInt = 0;//both
+        diskInt = 0;
 	    transferFlag = 0;
 	    return ret;
 	case 0x4031://FDS: Read data register
 	    transferFlag = 0;
-        mapperInt = 0;
+        diskInt = 0;//disk
         return readData;
 	case 0x4032://FDS: Disk drive status register
 		return (protectFlag | (!scanningDisk ? 0x02 : 0x00) | diskFlag); //ready flag is checked after motor is turned on
@@ -156,14 +161,15 @@ void write_fds_register(uint16_t address, uint8_t value) {
         if(irqEnabled) {
             irqCounter = irqReload;
         } else
-            mapperInt = 0;
+            mapperInt = 0;//ext
 		break;
 	case 0x4023: //FDS: Master I/O enable
 		enableDiskReg = (value & 0x01);
         enableSoundReg = (value & 0x02);
         if(!enableDiskReg) {
             irqEnabled = 0;
-            mapperInt = 0;
+            mapperInt = 0;//both
+            diskInt = 0;
         }
 		break;
 	case 0x4024: //FDS: Write data register
@@ -171,10 +177,10 @@ void write_fds_register(uint16_t address, uint8_t value) {
 	        printf("Attempting to write disk\n");
 	    }
 	    transferFlag = 0;
-	    mapperInt = 0;
+	    diskInt = 0;//disk
 		break;
 	case 0x4025: //FDS: Control
-        mapperInt = 0;
+        diskInt = 0;//disk
 		diskIrqEnabled  =  value & 0x80;
         diskReady       =  value & 0x40;
 		crcControl      =  value & 0x10;
@@ -195,11 +201,10 @@ void run_fds(uint16_t ntimes) {
     while(ntimes) {
         if(irqEnabled) {
             if(!irqCounter) {
-                mapperInt = 1;
+                mapperInt = 1;//ext
                 irqCounter = irqReload;
-                if(!irqRepeat) {
+                if(!irqRepeat)
                     irqEnabled = 0;
-                }
             }
             else
                 irqCounter--;
@@ -207,58 +212,64 @@ void run_fds(uint16_t ntimes) {
 
         uint8_t isIrq = diskIrqEnabled;
         uint8_t tmpData = 0;
+        uint8_t fdsDisabled = 0;
 
         if(!motorOn) {
             endOfHead = 1;
             scanningDisk = 0;
-            return;
+            fdsDisabled = 1;
         }
         if(resetTransfer && !scanningDisk) {
-            return;
-        }
-        if(endOfHead) {
-            delay = 50000;
-            gapEnded = 0;
-            endOfHead = 0;
-            readPosition = 0;
+            fdsDisabled = 1;
         }
 
-        if(delay > 0)
-            delay--;
-        else {
-            scanningDisk = 1;
-            if(readMode) {
-                tmpData = diskData[readPosition + ((diskSide * DISK_SIDE_SIZE) << 1)];
-                if(!diskReady) {
-                    gapEnded = 0;
-                }else if(tmpData && !gapEnded) {
-                    gapEnded = 1;
-                    isIrq = 0;
-                }
-                if(gapEnded) {
-                    transferFlag = 1;
-                    readData = tmpData;
-                    if(isIrq) {
-                        mapperInt = 1;
-                    }
-                }
-            } else {
-              if(!crcControl) {
-                  transferFlag = 1;
-                  if(isIrq)
-                      mapperInt = 1;
-              }
-              if(!diskReady)
-                  tmpData = 0;
+        if(!fdsDisabled) {
+            if(endOfHead) {
+                delay = 50000;
+                gapEnded = 0;
+                endOfHead = 0;
+                readPosition = 0;
             }
 
-            readPosition++;
-            if(readPosition >= DISK_SIDE_SIZE) {
-                motorOn = 0;
-            } else
-                delay = 150;
-        }
+            if(delay > 0)
+                delay--;
+            else {
+                scanningDisk = 1;
+                if(readMode) {
+                    tmpData = diskData[readPosition + ((diskSide * DISK_SIDE_SIZE) << 1)];
+                    if(!diskReady) {
+                        gapEnded = 0;
+                    }else if(tmpData && !gapEnded) {
+                        gapEnded = 1;
+                        isIrq = 0;
+                    }
+                    if(gapEnded) {
+                        transferFlag = 1;
+                        readData = tmpData;
+                        if(isIrq) {
+                            diskInt = 1;//disk
+                        }
+                    }
+                } else {
+                  if(!crcControl) {
+                      transferFlag = 1;
+                      if(isIrq)
+                          diskInt = 1;//disk
+                  }
+                  if(!diskReady)
+                      tmpData = 0;
+                }
 
+                readPosition++;
+                if(readPosition >= DISK_SIDE_SIZE) {
+                    motorOn = 0;
+                } else
+                    delay = 150;
+            }
+            if (diskInt && !irqPulled) {
+                irqPulled = 1;
+            }
+        }
         ntimes--;
         fds_wait--;
     }
