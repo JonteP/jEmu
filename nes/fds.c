@@ -32,7 +32,7 @@ static uint8_t fdsHeader[FDS_HEADER_SIZE], *diskData = NULL, irqEnabled = 0, dis
 FILE *biosFile, *diskFile;
 char bios[PATH_MAX], disk[PATH_MAX];
 uint8_t *fdsBiosRom = NULL, fdsRam[0x8000], *fdsDisk = NULL, diskStatus0 = 0, diskSide = 0, numSides = 0, *tmpDisk, scanningDisk = 0, diskFlag = 0;
-static uint8_t irqRepeat, enableDiskReg, enableSoundReg, protectFlag = 0, extOutput, diskInt = 0;
+static uint8_t irqRepeat, enableDiskReg, enableSoundReg, protectFlag = 0, extOutput, diskInt = 0, writeData = 0;
 static uint16_t irqReload, irqCounter, readPosition;
 static uint32_t delay = 0;
 
@@ -173,9 +173,7 @@ void write_fds_register(uint16_t address, uint8_t value) {
         }
 		break;
 	case 0x4024: //FDS: Write data register
-	    if(diskReady && !readMode) {
-	        printf("Attempting to write disk\n");
-	    }
+	    writeData = value;
 	    transferFlag = 0;
 	    diskInt = 0;//disk
 		break;
@@ -253,11 +251,13 @@ void run_fds(uint16_t ntimes) {
                 } else {
                   if(!crcControl) {
                       transferFlag = 1;
+                      tmpData = writeData;
                       if(isIrq)
                           diskInt = 1;//disk
                   }
                   if(!diskReady)
                       tmpData = 0;
+                  diskData[readPosition + ((diskSide * DISK_SIDE_SIZE) << 1)] = tmpData;
                 }
 
                 readPosition++;
