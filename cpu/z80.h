@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-void run_z80(void), power_reset(void);
+void run_z80(void), z80_power_reset(void);
 
 // Function pointers to be defined by the emulated machine
 uint8_t * (*read_z80_memory)(uint16_t);

@@ -148,12 +148,14 @@ void nes_reset_emulation() {
     init_audio();
     init_video();
     set_timings();
-    if (currentMachine->bios != NULL)
+    if (currentMachine->bios != NULL) {
+        init_fds();
         fds_load_disk(currentMachine->cartFile);
+    }
     else
         nes_load_rom(currentMachine->cartFile);
     init_mapper();
-    rstFlag = HARD_RESET;
+    _6502_power_reset(HARD_RESET);
 }
 
 /* TODO:
@@ -168,24 +170,24 @@ void save_state() {
     FILE *stateFile = fopen(stateName, "w");
     fwrite(prgBank, sizeof(prgBank), 1, stateFile);
     fwrite(cpuRam, sizeof(cpuRam), 1, stateFile);
-    fwrite(&cpuA, sizeof(cpuA), 1, stateFile);
+/*    fwrite(&cpuA, sizeof(cpuA), 1, stateFile);
     fwrite(&cpuX, sizeof(cpuX), 1, stateFile);
     fwrite(&cpuY, sizeof(cpuY), 1, stateFile);
     fwrite(&cpuP, sizeof(cpuP), 1, stateFile);
     fwrite(&cpuS, sizeof(cpuS), 1, stateFile);
-    fwrite(&cpuPC, sizeof(cpuPC), 1, stateFile);
+    fwrite(&cpuPC, sizeof(cpuPC), 1, stateFile);*/
     fwrite(chrBank, sizeof(chrBank), 1, stateFile);
     fwrite(chrSource, sizeof(chrSource), 1, stateFile);
     fwrite(oam, sizeof(oam), 1, stateFile);
     fwrite(nameSlot, sizeof(nameSlot), 1, stateFile);
     fwrite(ciram, sizeof(ciram), 1, stateFile);
     fwrite(palette, sizeof(palette), 1, stateFile);
-    fwrite(&ppudot, sizeof(ppudot), 1, stateFile);
-    fwrite(&ppu_vCounter, sizeof(ppu_vCounter), 1, stateFile);
-    fwrite(&ppuW, sizeof(ppuW), 1, stateFile);
+/*    fwrite(&ppudot, sizeof(ppudot), 1, stateFile);
+    fwrite(&ppu_vCounter, sizeof(ppu_vCounter), 1, stateFile);*/
+/*    fwrite(&ppuW, sizeof(ppuW), 1, stateFile);
     fwrite(&ppuX, sizeof(ppuX), 1, stateFile);
     fwrite(&ppuT, sizeof(ppuT), 1, stateFile);
-    fwrite(&ppuV, sizeof(ppuV), 1, stateFile);
+    fwrite(&ppuV, sizeof(ppuV), 1, stateFile);*/
     fwrite(&cart.mirroring, sizeof(cart.mirroring), 1, stateFile);
     if (cart.wramSize)
         fwrite(wram, cart.wramSize, 1, stateFile);
@@ -204,24 +206,24 @@ void load_state() {
     int readErr = 0;
     readErr |= fread(prgBank, sizeof(prgBank), 1, stateFile);
     readErr |= fread(cpuRam, sizeof(cpuRam), 1, stateFile);
-    readErr |= fread(&cpuA, sizeof(cpuA), 1, stateFile);
+/*    readErr |= fread(&cpuA, sizeof(cpuA), 1, stateFile);
     readErr |= fread(&cpuX, sizeof(cpuX), 1, stateFile);
     readErr |= fread(&cpuY, sizeof(cpuY), 1, stateFile);
     readErr |= fread(&cpuP, sizeof(cpuP), 1, stateFile);
     readErr |= fread(&cpuS, sizeof(cpuS), 1, stateFile);
-    readErr |= fread(&cpuPC, sizeof(cpuPC), 1, stateFile);
+    readErr |= fread(&cpuPC, sizeof(cpuPC), 1, stateFile);*/
     readErr |= fread(chrBank, sizeof(chrBank), 1, stateFile);
     readErr |= fread(chrSource, sizeof(chrSource), 1, stateFile);
     readErr |= fread(oam, sizeof(oam), 1, stateFile);
     readErr |= fread(nameSlot, sizeof(nameSlot), 1, stateFile);
     readErr |= fread(ciram, sizeof(ciram), 1, stateFile);
     readErr |= fread(palette, sizeof(palette), 1, stateFile);
-    readErr |= fread(&ppudot, sizeof(ppudot), 1, stateFile);
-    readErr |= fread(&ppu_vCounter, sizeof(ppu_vCounter), 1, stateFile);
-    readErr |= fread(&ppuW, sizeof(ppuW), 1, stateFile);
+/*    readErr |= fread(&ppudot, sizeof(ppudot), 1, stateFile);
+    readErr |= fread(&ppu_vCounter, sizeof(ppu_vCounter), 1, stateFile);*/
+/*    readErr |= fread(&ppuW, sizeof(ppuW), 1, stateFile);
     readErr |= fread(&ppuX, sizeof(ppuX), 1, stateFile);
     readErr |= fread(&ppuT, sizeof(ppuT), 1, stateFile);
-    readErr |= fread(&ppuV, sizeof(ppuV), 1, stateFile);
+    readErr |= fread(&ppuV, sizeof(ppuV), 1, stateFile);*/
     readErr |= fread(&cart.mirroring, sizeof(cart.mirroring), 1, stateFile);
     if (cart.wramSize)
         readErr |= fread(wram, cart.wramSize, 1, stateFile);
@@ -416,7 +418,7 @@ void write_cpu_register(uint16_t address, uint8_t value) {
         break;
     case 0x4014:
         source = ((value << 8) & 0xff00);
-        if (cpucc % 2)
+        if (_6502_cycleCounter % 2)
             _6502_addcycles(2);
         else
             _6502_addcycles(1);
@@ -424,8 +426,7 @@ void write_cpu_register(uint16_t address, uint8_t value) {
         for (int i = 0; i < 256; i++) {
             if (ppuOamAddress > 255)
                 ppuOamAddress = 0;
-            oam[ppuOamAddress] = _6502_cpuread(source++);
-            ppuOamAddress++;
+            oam[ppuOamAddress++] = _6502_cpuread(source++);
             _6502_addcycles(2);
             _6502_synchronize(0);
         }
@@ -468,7 +469,7 @@ void nes_6502_addcycles(uint8_t val) {
     vdp_wait += (val * ppuClockRatio);
     apu_wait += val;
     fds_wait += val;
-    cpucc += val;
+    _6502_cycleCounter += val;
 }
 
 void nes_6502_synchronize(int x) {

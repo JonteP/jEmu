@@ -1648,7 +1648,7 @@ void noop(){
 printf("Illegal opcode: %02x %02x %02x %02x\n",*read_z80_memory(cpuPC-4),*read_z80_memory(cpuPC-3),*read_z80_memory(cpuPC-2),op);
 exit(1);}
 
-void power_reset () {
+void z80_power_reset () {
 halted = 0;
 iff1 = iff2 = cpuPC = iMode = cpuI = cpuR = 0;
 cpuAF = cpuBC = cpuDE = cpuHL = cpuIX = cpuIY = 0xffff;

@@ -17,16 +17,24 @@ typedef enum version {
 	PPU_PAL	= 1
 } PPU_Version;
 
-void write_ppu_register(uint_fast16_t, uint_fast8_t), draw_nametable(), draw_pattern(), draw_palette(), init_ppu();
-uint_fast8_t read_ppu_register(uint_fast16_t), ppu_read(uint_fast16_t);
-void run_ppu(uint_fast16_t);
+uint8_t oam[0x100];     //object attribute memory
+uint8_t ciram[0x800];
+uint8_t palette[0x20];
+uint8_t *chrSlot[0x8];  //maps VRAM 0x0000-0x1fff in 0x400B banks
+uint8_t *nameSlot[0x4]; //maps CIRAM upper/lower banks according to mirroring mode
 
-extern uint_fast8_t ppuW, ppuX;
-extern uint_fast16_t ppuT, ppuV;
-extern uint_fast8_t ciram[0x800], palette[0x20];
-extern uint_fast8_t *chrSlot[0x8], *nameSlot[0x4], oam[0x100];
-extern uint_fast8_t throttle, ppuOamAddress;
-extern int16_t ppudot, ppu_vCounter;
-extern uint32_t nmiFlipFlop, frame, *ppuScreenBuffer;
-extern struct ppuDisplayMode ntscMode, palMode, *ppuCurrentMode;
+uint8_t ppuOamAddress;
+uint32_t nmiFlipFlop;
+uint32_t frame;
+int32_t ppucc;
+
+extern struct ppuDisplayMode ntscMode;
+extern struct ppuDisplayMode palMode;
+       struct ppuDisplayMode *ppuCurrentMode;
+
+void    write_ppu_register(uint16_t, uint8_t);
+void    init_ppu();
+void    run_ppu(uint16_t);
+uint8_t ppu_read(uint16_t);
+uint8_t read_ppu_register(uint16_t);
 #endif

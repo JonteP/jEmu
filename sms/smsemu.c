@@ -94,7 +94,7 @@ void sms_reset_emulation(){
 	sprintf(biosFile, "bios/%s",currentMachine->bios);
 	if(init_slots())
 			failure = 1;
-	power_reset();
+	z80_power_reset();
 	set_timings(1);
 }
 

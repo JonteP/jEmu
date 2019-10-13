@@ -700,7 +700,7 @@ void game_io(){
 			switch (event.key.keysym.scancode){
 			case SDL_SCANCODE_SPACE:
 			    if (!(event.key.repeat)) {
-			        diskSide ^= 1;
+			        currentDiskSide ^= 1;
 			    }
 			    break;
             case SDL_SCANCODE_LALT:

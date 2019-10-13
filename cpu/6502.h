@@ -14,16 +14,17 @@ typedef enum {
 	NONE = 0
 } reset_t;
 
-extern reset_t rstFlag;
-void run_6502(void), interrupt_handle(interrupt_t);
-void (*_6502_synchronize)(int);
-void (*_6502_addcycles)(uint8_t);
-uint8_t (*_6502_cpuread)(uint16_t);
-void (*_6502_cpuwrite)(uint16_t, uint8_t);
+uint8_t  dummywrite; //used for mmc1; TODO: cleaner solution
+uint8_t  irqPulled;
+uint8_t  nmiPulled;
+uint32_t _6502_cycleCounter;
 
-extern uint_fast8_t dummywrite, irqPulled, nmiPulled, cpuStall;
-extern uint_fast8_t cpuA, cpuX, cpuY, cpuP, cpuS;
-extern uint16_t cpuPC;
-extern uint32_t cpucc;
+//function pointers to be hooked up by emulated machine
+void    (*_6502_synchronize)(int);
+void    (*_6502_addcycles)  (uint8_t);
+uint8_t (*_6502_cpuread)    (uint16_t);
+void    (*_6502_cpuwrite)   (uint16_t, uint8_t);
 
+void run_6502(void);
+void _6502_power_reset(reset_t);
 #endif
