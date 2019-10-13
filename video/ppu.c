@@ -163,101 +163,101 @@ void run_ppu (uint16_t ntimes) {
         none, none, none, none, none
     };
 
-	static void (*fetchGraphics[0x341])() = {
-	    none, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    vINC, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
-	    none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
-	    none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
-	    none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
-	    none, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	    hINC, dfNT, none, dfNT, none
-	};
+    static void (*fetchGraphics[0x341])() = {
+        none, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        vINC, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
+        none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
+        none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
+        none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
+        none, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+        hINC, dfNT, none, dfNT, none
+    };
 
-	while (ntimes) {
-	    if (mapperInt && !irqPulled) {
-	        irqPulled = 1;
-	    }
-	    ppudot++;
-	    ppucc++;
-	    check_nmi();
-	    if (ppudot == 341) {
-	        ppu_vCounter++;
-	        ppudot = 0;
-	    }
-	    if (ppu_vCounter == ppuCurrentMode->scanlines) {
-	        ppu_vCounter = 0;
-	        frame++;
-	    }
+    while (ntimes) {
+        if (mapperInt && !irqPulled) {
+            irqPulled = 1;
+        }
+        ppudot++;
+        ppucc++;
+        check_nmi();
+        if (ppudot == 341) {
+            ppu_vCounter++;
+            ppudot = 0;
+        }
+        if (ppu_vCounter == ppuCurrentMode->scanlines) {
+            ppu_vCounter = 0;
+            frame++;
+        }
 
 /* VBLANK ONSET */
-	    if (ppu_vCounter == 241 && ppudot == 1) {
-	        ppuStatusNmi = 1; /* set vblank */
-	        vblank_period = 1;
-	    }
+        if (ppu_vCounter == 241 && ppudot == 1) {
+            ppuStatusNmi = 1; /* set vblank */
+            vblank_period = 1;
+        }
 /* PRERENDER SCANLINE */
-	    else if (ppu_vCounter == (ppuCurrentMode->scanlines - 1)) {
-	        if (ppuMask & 0x18)	{
-	            (*fetchGraphics[ppudot])();
-	            (*spriteEvaluation[ppudot])();
-	        }
-	        ppu_render();
-	        if (ppudot == 1) {
-	            if (ppuStatusNmi) {
-	                ppuStatusNmi = 0; /* clear vblank */
-	                ppuStatusNmiDelay = 1;
-	            }
-	            nmiSuppressed = 0;
-	            ppuStatusSpriteZero = 0;
-	            nmiPulled = 0;
-	            vblank_period = 0;
-	            ppuStatusOverflow = 0;
-	        }
-	        if (ppudot ==2)
-	            ppuStatusNmiDelay = 0;
-	        else if (ppudot >= 257 && ppudot <= 320) {
+        else if (ppu_vCounter == (ppuCurrentMode->scanlines - 1)) {
+            if (ppuMask & 0x18)	{
+                (*fetchGraphics[ppudot])();
+                (*spriteEvaluation[ppudot])();
+            }
+            ppu_render();
+            if (ppudot == 1) {
+                if (ppuStatusNmi) {
+                    ppuStatusNmi = 0; /* clear vblank */
+                    ppuStatusNmiDelay = 1;
+                }
+                nmiSuppressed = 0;
+                ppuStatusSpriteZero = 0;
+                nmiPulled = 0;
+                vblank_period = 0;
+                ppuStatusOverflow = 0;
+            }
+            if (ppudot ==2)
+                ppuStatusNmiDelay = 0;
+            else if (ppudot >= 257 && ppudot <= 320) {
 /* (reset OAM) */
-	            ppuOamAddress = 0; /* only if rendering active? */
-	            if (ppudot == 257)
-	                horizontal_t_to_v();
-	            else if (ppudot >= 280 && ppudot <= 304)
-	                vertical_t_to_v();
-	        } else if (ppudot == 339) {
-	            if (frame%2 && (ppuMask & 0x18) && ppuCurrentMode->scanlines == NTSC_SCANLINES)
-	                ppudot++;
-	        }
+                ppuOamAddress = 0; /* only if rendering active? */
+                if (ppudot == 257)
+                    horizontal_t_to_v();
+                else if (ppudot >= 280 && ppudot <= 304)
+                    vertical_t_to_v();
+            } else if (ppudot == 339) {
+                if (frame%2 && (ppuMask & 0x18) && ppuCurrentMode->scanlines == NTSC_SCANLINES)
+                    ppudot++;
+            }
 /* RESET CLOCK COUNTER HERE... */
-	    } else if (ppu_vCounter == 240 && ppudot == 0) {
-	        ppucc = 0;
-	    }
+        } else if (ppu_vCounter == 240 && ppudot == 0) {
+            ppucc = 0;
+        }
 /* RENDERED LINES */
-	    else if (ppu_vCounter < 240) {
-	        if (!ppu_vCounter && !ppudot)
-	            render_frame(ppuScreenBuffer);
-	        if (ppuMask & 0x18)	{
-	            (*fetchGraphics[ppudot])();
-	            (*spriteEvaluation[ppudot])();
-	        }
-	        ppu_render();
-	        if (ppudot == 257)
-	            horizontal_t_to_v();
-	    }
-	    ntimes--;
-	    vdp_wait -= (1 << 16);
+        else if (ppu_vCounter < 240) {
+            if (!ppu_vCounter && !ppudot)
+                render_frame(ppuScreenBuffer);
+            if (ppuMask & 0x18)	{
+                (*fetchGraphics[ppudot])();
+                (*spriteEvaluation[ppudot])();
+            }
+            ppu_render();
+            if (ppudot == 257)
+                horizontal_t_to_v();
+        }
+        ntimes--;
+        vdp_wait -= (1 << 16);
     }
 }
 
