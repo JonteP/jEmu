@@ -70,42 +70,42 @@ static const uint8_t smoothFbx[] = {
 
 //Unknown source?
 static const uint8_t colarray[] = {
-	124, 124, 124,   0,   0, 252,   0,   0, 188,  68,  40, 188, /* 0x00 */
-    148,   0, 132, 168,   0,  32, 168,  16,   0, 136,  20,   0, /* 0x04 */
-     80,  48,   0,   0, 120,   0,   0, 104,   0,   0,  88,   0, /* 0x08 */
-	  0,  64,  88,   0,   0,   0,   0,   0,   0,   0,   0,   0, /* 0x0c */
-    188, 188, 188,   0, 120, 248,   0,  88, 248, 104,  68, 252, /* 0x10 */
-    216,   0, 204, 228,   0,  88, 248,  56,   0, 228,  92,  16, /* 0x14 */
-    172, 124,   0,   0, 184,   0,   0, 168,   0,   0, 168,  68, /* 0x18 */
-      0, 136, 136,   0,   0,   0,   0,   0,   0,   0,   0,   0, /* 0x1c */
-    248, 248, 248,  60, 188, 252, 104, 136, 252, 152, 120, 248, /* 0x20 */
-    248, 120, 248, 248,  88, 152, 248, 120,  88, 252, 160,  68, /* 0x24 */
-    248, 184,   0, 184, 248,  24,  88, 216,  84,  88, 248, 152, /* 0x28 */
-      0, 232, 216, 120, 120, 120,   0,   0,   0,   0,   0,   0, /* 0x2c */
-    252, 252, 252, 164, 228, 252, 184, 184, 248, 216, 184, 248, /* 0x30 */
-    248, 184, 248, 248, 164, 192, 240, 208, 176, 252, 224, 168, /* 0x34 */
-    248, 216, 120, 216, 248, 120, 184, 248, 184, 184, 248, 216, /* 0x38 */
-      0, 252, 252, 248, 216, 248,   0,   0,   0,   0,   0,   0  /* 0x3c */
+    124, 124, 124,   0,   0, 252,   0,   0, 188,  68,  40, 188,
+    148,   0, 132, 168,   0,  32, 168,  16,   0, 136,  20,   0,
+     80,  48,   0,   0, 120,   0,   0, 104,   0,   0,  88,   0,
+      0,  64,  88,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    188, 188, 188,   0, 120, 248,   0,  88, 248, 104,  68, 252,
+    216,   0, 204, 228,   0,  88, 248,  56,   0, 228,  92,  16,
+    172, 124,   0,   0, 184,   0,   0, 168,   0,   0, 168,  68,
+      0, 136, 136,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    248, 248, 248,  60, 188, 252, 104, 136, 252, 152, 120, 248,
+    248, 120, 248, 248,  88, 152, 248, 120,  88, 252, 160,  68,
+    248, 184,   0, 184, 248,  24,  88, 216,  84,  88, 248, 152,
+      0, 232, 216, 120, 120, 120,   0,   0,   0,   0,   0,   0,
+    252, 252, 252, 164, 228, 252, 184, 184, 248, 216, 184, 248,
+    248, 184, 248, 248, 164, 192, 240, 208, 176, 252, 224, 168,
+    248, 216, 120, 216, 248, 120, 184, 248, 184, 184, 248, 216,
+      0, 252, 252, 248, 216, 248,   0,   0,   0,   0,   0,   0
 };
 
 //Unknown source?
 static const uint8_t colblargg[] = {
      84,  84,  84,   0,  30, 116,   8,  16, 144,  48,   0, 136,
      68,   0, 100,  92,   0,  48,  84,   4,   0,  60,  24,   0,
-	 32,  42,   0,   8,  58,   0,   0,  64,   0,   0,  60,   0,
-	  0,  50,  60,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-	152, 150, 152,   8,  76, 196,  48,  50, 236,  92,  30, 228,
-	136,  20, 176, 160,  20, 100, 152,  34,  32, 120,  60,   0,
-	 84,  90,   0,  40, 114,   0,   8, 124,   0,   0, 118,  40,
-	  0, 102, 120,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-	236, 238, 236,  76, 154, 236, 120, 124, 236, 176,  98, 236,
-	228,  84, 236, 236,  88, 180, 236, 106, 100, 212, 136,  32,
-	160, 170,   0, 116, 196,   0,  76, 208,  32,  56, 204, 108,
-	 56, 180, 204,  60,  60,  60,   0,   0,   0,   0,   0,   0,
-	236, 238, 236, 168, 204, 236, 188, 188, 236, 212, 178, 236,
-	236, 174, 236, 236, 174, 212, 236, 180, 176, 228, 196, 144,
-	204, 210, 120, 180, 222, 120, 168, 226, 144, 152, 226, 180,
-	160, 214, 228, 160, 162, 160,   0,   0,   0,   0,   0,   0
+     32,  42,   0,   8,  58,   0,   0,  64,   0,   0,  60,   0,
+      0,  50,  60,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    152, 150, 152,   8,  76, 196,  48,  50, 236,  92,  30, 228,
+    136,  20, 176, 160,  20, 100, 152,  34,  32, 120,  60,   0,
+     84,  90,   0,  40, 114,   0,   8, 124,   0,   0, 118,  40,
+      0, 102, 120,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    236, 238, 236,  76, 154, 236, 120, 124, 236, 176,  98, 236,
+    228,  84, 236, 236,  88, 180, 236, 106, 100, 212, 136,  32,
+    160, 170,   0, 116, 196,   0,  76, 208,  32,  56, 204, 108,
+     56, 180, 204,  60,  60,  60,   0,   0,   0,   0,   0,   0,
+    236, 238, 236, 168, 204, 236, 188, 188, 236, 212, 178, 236,
+    236, 174, 236, 236, 174, 212, 236, 180, 176, 228, 196, 144,
+    204, 210, 120, 180, 222, 120, 168, 226, 144, 152, 226, 180,
+    160, 214, 228, 160, 162, 160,   0,   0,   0,   0,   0,   0
 };
 
 static inline void check_nmi();
@@ -119,210 +119,219 @@ static inline uint8_t * ppuread(uint16_t);
 static inline void none(), seZ(), seRD(), seWD(), seRR(), seWW(), tfNT(), tfAT(), tfLT(), tfHT(), sfNT(), sfAT(), sfLT(), sfHT(), dfNT(), hINC(), vINC();
 
 //TODO: what are proper startup values?
-void init_ppu(){
-	free(ppuScreenBuffer);
-	ppuScreenBuffer = malloc(ppuCurrentMode->height * ppuCurrentMode->width * sizeof(uint32_t));
-	frame = 0;
-	nmiFlipFlop = 0;
-	ppucc = 0;
-	ppuStatusNmi = 0;
-	ppuStatusSpriteZero = 0;
-	ppuStatusOverflow = 0;
-	ppuStatusNmiDelay = 0;
-	ppudot = 0;
-	ppu_vCounter = 0;
-	vblank_period = 0;
-	nmiSuppressed = 0;
-	ppuW = 0;
-	ppuX = 0;
+void init_ppu() {
+    free(ppuScreenBuffer);
+    ppuScreenBuffer = malloc(ppuCurrentMode->height * ppuCurrentMode->width * sizeof(uint32_t));
+    frame = 0;
+    nmiFlipFlop = 0;
+    ppucc = 0;
+    ppuStatusNmi = 0;
+    ppuStatusSpriteZero = 0;
+    ppuStatusOverflow = 0;
+    ppuStatusNmiDelay = 0;
+    ppudot = 0;
+    ppu_vCounter = 0;
+    vblank_period = 0;
+    nmiSuppressed = 0;
+    ppuW = 0;
+    ppuX = 0;
 }
 
 void run_ppu (uint16_t ntimes) {
-	static void (*spriteEvaluation[0x341])() = {
-	seZ,  seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD,
-	seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD,
-	seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD,
-	seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD,
-	seWD, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
-	seWW, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
-	none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
-	none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
-	none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
-	none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
-	none, none, none, none, none };
+    static void (*spriteEvaluation[0x341])() = {
+        seZ,  seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD,
+        seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD,
+        seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD,
+        seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD, seWD, seRD,
+        seWD, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR, seWW, seRR,
+        seWW, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
+        none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
+        none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
+        none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
+        none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
+        none, none, none, none, none
+    };
 
 	static void (*fetchGraphics[0x341])() = {
-	none, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	vINC, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
-	none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
-	none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
-	none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
-	none, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
-	hINC, dfNT, none, dfNT, none };
+	    none, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    vINC, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
+	    none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
+	    none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
+	    none, sfNT, none, sfAT, none, sfLT, none, sfHT, none, sfNT, none, sfAT, none, sfLT, none, sfHT,
+	    none, tfNT, none, tfAT, none, tfLT, none, tfHT, hINC, tfNT, none, tfAT, none, tfLT, none, tfHT,
+	    hINC, dfNT, none, dfNT, none
+	};
 
 	while (ntimes) {
-		if (mapperInt && !irqPulled) {
-			irqPulled = 1;
-		}
-		ppudot++;
-		ppucc++;
-
-		check_nmi();
-		if (ppudot == 341) {
-		ppu_vCounter++;
-		ppudot = 0;
-		}
-		if (ppu_vCounter == ppuCurrentMode->scanlines) {
-		ppu_vCounter = 0;
-		frame++;
-		}
+	    if (mapperInt && !irqPulled) {
+	        irqPulled = 1;
+	    }
+	    ppudot++;
+	    ppucc++;
+	    check_nmi();
+	    if (ppudot == 341) {
+	        ppu_vCounter++;
+	        ppudot = 0;
+	    }
+	    if (ppu_vCounter == ppuCurrentMode->scanlines) {
+	        ppu_vCounter = 0;
+	        frame++;
+	    }
 
 /* VBLANK ONSET */
-		if (ppu_vCounter == 241 && ppudot == 1) {
-		    ppuStatusNmi = 1; /* set vblank */
-		    vblank_period = 1;
-		}
+	    if (ppu_vCounter == 241 && ppudot == 1) {
+	        ppuStatusNmi = 1; /* set vblank */
+	        vblank_period = 1;
+	    }
 /* PRERENDER SCANLINE */
-		else if (ppu_vCounter == (ppuCurrentMode->scanlines - 1)) {
-		    if (ppuMask & 0x18)	{
-		        (*fetchGraphics[ppudot])();
-		        (*spriteEvaluation[ppudot])();
-		    }
-		    ppu_render();
-		    if (ppudot == 1) {
-		        if (ppuStatusNmi) {
-		            ppuStatusNmi = 0; /* clear vblank */
-		            ppuStatusNmiDelay = 1;
-		        }
-		        nmiSuppressed = 0;
-		        ppuStatusSpriteZero = 0;
-		        nmiPulled = 0;
-		        vblank_period = 0;
-		        ppuStatusOverflow = 0;
-		    }
-		    if (ppudot ==2)
-		        ppuStatusNmiDelay = 0;
-		    else if (ppudot >= 257 && ppudot <= 320) {
-			  /* (reset OAM) */
-		        ppuOamAddress = 0; /* only if rendering active? */
-		        if (ppudot == 257)
-		            horizontal_t_to_v();
-		        else if (ppudot >= 280 && ppudot <= 304)
-		            vertical_t_to_v();
-		    } else if (ppudot == 339) {
-		        if (frame%2 && (ppuMask & 0x18) && ppuCurrentMode->scanlines == NTSC_SCANLINES)
-		            ppudot++;
-		    }
-
+	    else if (ppu_vCounter == (ppuCurrentMode->scanlines - 1)) {
+	        if (ppuMask & 0x18)	{
+	            (*fetchGraphics[ppudot])();
+	            (*spriteEvaluation[ppudot])();
+	        }
+	        ppu_render();
+	        if (ppudot == 1) {
+	            if (ppuStatusNmi) {
+	                ppuStatusNmi = 0; /* clear vblank */
+	                ppuStatusNmiDelay = 1;
+	            }
+	            nmiSuppressed = 0;
+	            ppuStatusSpriteZero = 0;
+	            nmiPulled = 0;
+	            vblank_period = 0;
+	            ppuStatusOverflow = 0;
+	        }
+	        if (ppudot ==2)
+	            ppuStatusNmiDelay = 0;
+	        else if (ppudot >= 257 && ppudot <= 320) {
+/* (reset OAM) */
+	            ppuOamAddress = 0; /* only if rendering active? */
+	            if (ppudot == 257)
+	                horizontal_t_to_v();
+	            else if (ppudot >= 280 && ppudot <= 304)
+	                vertical_t_to_v();
+	        } else if (ppudot == 339) {
+	            if (frame%2 && (ppuMask & 0x18) && ppuCurrentMode->scanlines == NTSC_SCANLINES)
+	                ppudot++;
+	        }
 /* RESET CLOCK COUNTER HERE... */
-		} else if (ppu_vCounter == 240 && ppudot == 0) {
-		    ppucc = 0;
-		}
+	    } else if (ppu_vCounter == 240 && ppudot == 0) {
+	        ppucc = 0;
+	    }
 /* RENDERED LINES */
-		else if (ppu_vCounter < 240) {
-		    if (!ppu_vCounter && !ppudot)
-		        render_frame(ppuScreenBuffer);
-		    if (ppuMask & 0x18)	{
-		        (*fetchGraphics[ppudot])();
-		        (*spriteEvaluation[ppudot])();
-		    }
-		    ppu_render();
-		    if (ppudot == 257)
-		        horizontal_t_to_v();
-		}
-		ntimes--;
-		vdp_wait -= (1 << 16);
-	}
+	    else if (ppu_vCounter < 240) {
+	        if (!ppu_vCounter && !ppudot)
+	            render_frame(ppuScreenBuffer);
+	        if (ppuMask & 0x18)	{
+	            (*fetchGraphics[ppudot])();
+	            (*spriteEvaluation[ppudot])();
+	        }
+	        ppu_render();
+	        if (ppudot == 257)
+	            horizontal_t_to_v();
+	    }
+	    ntimes--;
+	    vdp_wait -= (1 << 16);
+    }
 }
 
-static uint8_t bgData, ntData, attData, tileLow, tileHigh, spriteLow, spriteHigh;
+static uint8_t ntData, attData, tileLow, tileHigh, spriteLow, spriteHigh;
 static uint16_t tileShifterLow, tileShifterHigh, attShifterHigh, attShifterLow;
 static uint8_t oamOverflow1, oamOverflow2, nSprite1, nSprite2, nData, data, nData2;
 static uint8_t spriteBuffer[256], zeroBuffer[256], priorityBuffer[256], isSpriteZero = 0xff;
 static uint8_t foundSprites = 0;
+
 void none () {}
+
 void seZ () {
-	isSpriteZero = 0xff;
-	oamOverflow1 = 0;
-	oamOverflow2 = 0;
-	nSprite1 = 0;
-	nSprite2 = 0;
-	nData = 0;
-	nData2 = 0;
-	foundSprites = 0;
+    isSpriteZero = 0xff;
+    oamOverflow1 = 0;
+    oamOverflow2 = 0;
+    nSprite1 = 0;
+    nSprite2 = 0;
+    nData = 0;
+    nData2 = 0;
+    foundSprites = 0;
 }
-void seRD () { data = 0xff; }
-void seWD () { secOam[(ppudot >> 1) - 1] = data; }
+
+void seRD () {
+    data = 0xff;
+}
+
+void seWD () {
+    secOam[(ppudot >> 1) - 1] = data;
+}
+
 void seRR () {
-	if (ppudot == 65)
-		nSprite1 = (ppuOamAddress >> 2);
-	if (nSprite1 == 64) {
-		oamOverflow1 = 1;
-		nSprite1 = 0;
-		ppuOamAddress = 0;
-	}
-	data = oam[(nSprite1 << 2) + nData]; /* read y coordinate */
-	if (!nData && !(data <= ppu_vCounter && ppu_vCounter <= (data + 7 + ( (ppuController >> 2) & 0x08)))) { /* not within range */
-		nSprite1++;
-		ppuOamAddress += 4;
-	}
-	else {
-		if (!nData  && !oamOverflow1) {
-			foundSprites++;
-			if (foundSprites > 8)
-				ppuStatusOverflow = 1;
-		}
-		nData++;
-		if (nData == 4)	{
-			nData = 0;
-			nSprite1++;
-			ppuOamAddress += 4;
-		}
-	}
+    if (ppudot == 65)
+        nSprite1 = (ppuOamAddress >> 2);
+    if (nSprite1 == 64) {
+        oamOverflow1 = 1;
+        nSprite1 = 0;
+        ppuOamAddress = 0;
+    }
+    data = oam[(nSprite1 << 2) + nData]; /* read y coordinate */
+    if (!nData && !(data <= ppu_vCounter && ppu_vCounter <= (data + 7 + ( (ppuController >> 2) & 0x08)))) { /* not within range */
+        nSprite1++;
+        ppuOamAddress += 4;
+    }
+    else {
+        if (!nData  && !oamOverflow1) {
+            foundSprites++;
+            if (foundSprites > 8)
+                ppuStatusOverflow = 1;
+        }
+        nData++;
+        if (nData == 4)	{
+            nData = 0;
+            nSprite1++;
+            ppuOamAddress += 4;
+        }
+    }
 }
 
 void seWW () {
-	if (!(oamOverflow1 | oamOverflow2))	{
-		secOam[(nSprite2 << 2) + nData2] = data;
-		if (nData2 == 3) {
-			nData2 = 0;
-			nSprite2++;
-			if (nSprite2 == 8) {
-				nSprite2 = 0;
-				oamOverflow2 = 1;
-			}
-		}
-		else {
-		    if (nData2 == 1 && nSprite1 == 0)
-		        isSpriteZero = nSprite2;
-		    nData2 = nData;
-		}
+    if (!(oamOverflow1 | oamOverflow2))	{
+        secOam[(nSprite2 << 2) + nData2] = data;
+        if (nData2 == 3) {
+            nData2 = 0;
+            nSprite2++;
+            if (nSprite2 == 8) {
+                nSprite2 = 0;
+                oamOverflow2 = 1;
+            }
+        }
+        else {
+            if (nData2 == 1 && nSprite1 == 0)
+                isSpriteZero = nSprite2;
+            nData2 = nData;
+        }
     }
 }
 
@@ -330,42 +339,53 @@ void tfNT() {
     uint16_t a = (0x2000 | (ppuV & 0xfff));
     ntData = *ppuread(a);
 }
+
 void tfAT() {
     uint16_t a = (0x23c0 | (ppuV & 0xc00) | ((ppuV >> 4) & 0x38) | ((ppuV >> 2) & 0x07));
-    bgData = *ppuread(a);
+    uint8_t bgData = *ppuread(a);
     attData = ((bgData >> ((((ppuV >> 1) & 1) | ((ppuV >> 5) & 2)) << 1)) & 3);
 }
+
 void tfLT() {
     uint16_t a = ((ntData << 4) + ((ppuController & 0x10) << 8) + ((ppuV >> 12) & 7));
     tileLow = *ppuread(a);
 }
+
 void tfHT() {
     uint16_t a = ((ntData << 4) + ((ppuController & 0x10) << 8) + ((ppuV >> 12) & 7) + 8);
     tileHigh = *ppuread(a);
     toggle_a12(a);
 }
-void sfNT() { ppuOamAddress = 0; }
-void sfAT() { ppuOamAddress = 0; }
 
-static uint8_t cSprite, *sprite, yOffset, flipY, spriteRow;
+void sfNT() {
+    ppuOamAddress = 0;
+}
+
+void sfAT() {
+    ppuOamAddress = 0;
+}
+
+static uint8_t cSprite, *sprite, spriteRow;
 static uint16_t patternOffset;
 
+//Sprite fetch, low tile
 void sfLT() {
     cSprite = ((ppudot >> 3) & 0x07);
     sprite = secOam + (cSprite << 2);
-    yOffset = ppu_vCounter - (sprite[0]);
-    flipY = ((sprite[2] >> 7) & 1);
+    uint8_t yOffset = ppu_vCounter - (sprite[0]);
+    uint8_t flipY = ((sprite[2] >> 7) & 1);
     spriteRow = (yOffset & 7) + flipY * (7 - ((yOffset & 7) << 1));
     if (ppuController & 0x20) /* 8x16 sprites */
-        patternOffset = (((sprite[1] & 0x01) << 12) 	/* select pattern table */
-        + ((sprite[1] & 0xfe) << 4) 					/* offset for top tile (16b per tile) */
-        + (((yOffset << 1) ^ (flipY << 4)) & 0x10)); 	/* select bottom tile if either offset 8+ or flipped sprite */
+        patternOffset = (((sprite[1] & 0x01) << 12) 	// select pattern table
+        + ((sprite[1] & 0xfe) << 4) 					// offset for top tile (16b per tile)
+        + (((yOffset << 1) ^ (flipY << 4)) & 0x10)); 	// select bottom tile if either offset 8+ or flipped sprite
     else if(!(ppuController & 0x20)) // 8x8 sprites
         patternOffset = (sprite[1] << 4) + ((ppuController & 0x08) ? 0x1000 : 0);
     spriteLow = *ppuread(patternOffset + spriteRow);
     ppuOamAddress = 0;
 }
 
+//Sprite fetch, high tile
 void sfHT() {
     spriteHigh = *ppuread(patternOffset + spriteRow + 8);
     ppuOamAddress = 0;
@@ -387,6 +407,7 @@ void sfHT() {
 }
 
 void dfNT() { }
+
 void hINC() {
     if (ppuMask & 0x18)	{
         if ((ppuV & 0x1f) == 0x1f) {
@@ -493,123 +514,6 @@ void vertical_t_to_v() {
         ppuV = (ppuV & 0x841f) | (ppuT & 0x7be0); /* reset Y scroll */
     }
 }
-/*
-void draw_nametable () {
-	uint_fast8_t	*tilesrcA, npalA, attsrcA, paletteIndexA, *tilesrcB, npalB, attsrcB, paletteIndexB, *tilesrcC, npalC, attsrcC, paletteIndexC, *tilesrcD, npalD, attsrcD, paletteIndexD;
-	uint_fast16_t tileOffsetA, tileOffsetB, tileOffsetC, tileOffsetD;
-	for (int tileRow = 0; tileRow < 30; tileRow++) {
-		for (int tileColumn = 0; tileColumn < 32; tileColumn++) {
-			tileOffsetA = 16 * nameSlot[0][tileRow * 32 + tileColumn] + ((ppuController & 0x10) <<8);
-		    tilesrcA = &chrSlot[(tileOffsetA>>10)][tileOffsetA&0x3ff];
-		    attsrcA = nameSlot[0][0x3c0 + (tileRow >> 2) * 8 + (tileColumn >> 2)];
-		    npalA = ((attsrcA >> (((tileColumn >> 1) & 1) | (tileRow & 2) ) * 2) & 3);
-
-			tileOffsetB = 16 * nameSlot[1][tileRow * 32 + tileColumn] + ((ppuController & 0x10) <<8);
-		    tilesrcB = &chrSlot[(tileOffsetB>>10)][tileOffsetB&0x3ff];
-		    attsrcB = nameSlot[1][0x3c0 + (tileRow >> 2) * 8 + (tileColumn >> 2)];
-		    npalB = ((attsrcB >> (((tileColumn >> 1) & 1) | (tileRow & 2) ) * 2) & 3);
-
-			tileOffsetC = 16 * nameSlot[2][tileRow * 32 + tileColumn] + ((ppuController & 0x10) <<8);
-		    tilesrcC = &chrSlot[(tileOffsetC>>10)][tileOffsetC&0x3ff];
-		    attsrcC = nameSlot[2][0x3c0 + (tileRow >> 2) * 8 + (tileColumn >> 2)];
-		    npalC = ((attsrcC >> (((tileColumn >> 1) & 1) | (tileRow & 2) ) * 2) & 3);
-
-			tileOffsetD = 16 * nameSlot[3][tileRow * 32 + tileColumn] + ((ppuController & 0x10) <<8);
-		    tilesrcD = &chrSlot[(tileOffsetD>>10)][tileOffsetD&0x3ff];
-		    attsrcD = nameSlot[3][0x3c0 + (tileRow >> 2) * 8 + (tileColumn >> 2)];
-		    npalD = ((attsrcD >> (((tileColumn >> 1) & 1) | (tileRow & 2) ) * 2) & 3);
-
-		    for (int pixelRow = 0; pixelRow < 8; pixelRow++) {
-				for (int pixelColumn = 0; pixelColumn < 8; pixelColumn++) {
-					paletteIndexA = (((tilesrcA[pixelRow]     & (1<<(7-pixelColumn))) ? 1 : 0)
-										  + ( (tilesrcA[pixelRow + 8] & (1<<(7-pixelColumn))) ? 2 : 0));
-					nameBuffer[(tileRow<<3) + pixelRow][(tileColumn<<3) + pixelColumn] =
-									paletteIndexA ? *ppuread(0x3f00 + npalA * 4 + paletteIndexA) : *ppuread(0x3f00);
-					paletteIndexB = (((tilesrcB[pixelRow]     & (1<<(7-pixelColumn))) ? 1 : 0)
-										  + ( (tilesrcB[pixelRow + 8] & (1<<(7-pixelColumn))) ? 2 : 0));
-					nameBuffer[(tileRow<<3) + pixelRow][SWIDTH + (tileColumn<<3) + pixelColumn] =
-									paletteIndexB ? *ppuread(0x3f00 + npalB * 4 + paletteIndexB) : *ppuread(0x3f00);
-					paletteIndexC = (((tilesrcC[pixelRow]     & (1<<(7-pixelColumn))) ? 1 : 0)
-										  + ( (tilesrcC[pixelRow + 8] & (1<<(7-pixelColumn))) ? 2 : 0));
-					nameBuffer[SHEIGHT + (tileRow<<3) + pixelRow][(tileColumn<<3) + pixelColumn] =
-									paletteIndexC ? *ppuread(0x3f00 + npalC * 4 + paletteIndexC) : *ppuread(0x3f00);
-					paletteIndexD = (((tilesrcD[pixelRow]     & (1<<(7-pixelColumn))) ? 1 : 0)
-										  + ( (tilesrcD[pixelRow + 8] & (1<<(7-pixelColumn))) ? 2 : 0));
-					nameBuffer[SHEIGHT + (tileRow<<3) + pixelRow][SWIDTH + (tileColumn<<3) + pixelColumn] =
-									paletteIndexD ? *ppuread(0x3f00 + npalD * 4 + paletteIndexD) : *ppuread(0x3f00);
-				}
-			}
-		}
-	}
-	int x = ((ppuV & 0x1f) - 2);
-	int y = ((ppuV >> 5) & 0x1f);
-	int nx = ((ppuV >> 10) & 0x01);
-	int ny = ((ppuV >> 11) & 0x01);
-	int xStart = (nx * SWIDTH + x * 8);
-	int yStart = (ny * SHEIGHT + y * 8);
-	int xEnd = ((nx * SWIDTH + x * 8 + SWIDTH) - 1);
-	int yEnd = ((ny * SHEIGHT + y * 8 + SHEIGHT) - 1);
-
-	for (int xy = 0; xy < 256; xy++)
-	{
-		int xOffset = (nx * SWIDTH + x * 8 + xy);
-		int yOffset = (ny * SHEIGHT + y * 8 + xy);
-		if (xy > 239)
-			yOffset = (ny * SHEIGHT + y * 8);
-		nameBuffer[yStart%(SHEIGHT<<1)][xOffset%(SWIDTH<<1)] = 0x30;
-		nameBuffer[yOffset%(SHEIGHT<<1)][xStart%(SWIDTH<<1)] = 0x30;
-		nameBuffer[yEnd%(SHEIGHT<<1)][xOffset%(SWIDTH<<1)] = 0x30;
-		nameBuffer[yOffset%(SHEIGHT<<1)][xEnd%(SWIDTH<<1)] = 0x30;
-	}
-}
-
-void draw_pattern () {
-	uint_fast8_t	*tilesrcA, npalA;
-	uint_fast16_t tileOffsetA, palSourceA;
-	uint_fast8_t	*tilesrcB, npalB;
-	uint_fast16_t tileOffsetB, palSourceB;
-	for (int tileRow = 0; tileRow < 16; tileRow++) {
-		for (int tileColumn = 0; tileColumn < 16; tileColumn++) {
-			tileOffsetA = 16 * ((tileRow << 4) + tileColumn);
-		    tilesrcA = &chrSlot[(tileOffsetA>>10)][tileOffsetA&0x3ff];
-		    npalA = 0;
-			tileOffsetB = 16 * ((tileRow << 4) + tileColumn) + 0x1000;
-		    tilesrcB = &chrSlot[(tileOffsetB>>10)][tileOffsetB&0x3ff];
-		    npalB = 0;
-		    palSourceA = (ppuController & 0x10) ? 0x3f10 : 0x3f00;
-		    palSourceB = (ppuController & 0x08) ? 0x3f10 : 0x3f00;
-
-			for (int pixelRow = 0; pixelRow < 8; pixelRow++) {
-				for (int pixelColumn = 0; pixelColumn < 8; pixelColumn++) {
-
-					patternBuffer[(tileRow<<3) + pixelRow][         (tileColumn<<3) + pixelColumn] =
-						*ppuread(palSourceA + npalA * 4
-						+ (((tilesrcA[pixelRow]     & (1<<(7-pixelColumn))) ? 1 : 0)
-						+ ( (tilesrcA[pixelRow + 8] & (1<<(7-pixelColumn))) ? 2 : 0)));
-
-					patternBuffer[(tileRow<<3) + pixelRow][(SWIDTH>>1) + (tileColumn<<3) + pixelColumn] =
-						*ppuread(palSourceB + npalB * 4
-						+ (((tilesrcB[pixelRow]     & (1<<(7-pixelColumn))) ? 1 : 0)
-						+ ( (tilesrcB[pixelRow + 8] & (1<<(7-pixelColumn))) ? 2 : 0)));
-				}
-			}
-		}
-	}
-}
-
-void draw_palette () {
-	for (int tileRow = 0; tileRow < 2; tileRow++) {
-		for (int tileColumn = 0; tileColumn < 16; tileColumn++) {
-			for (int pixelRow = 0; pixelRow < 8; pixelRow++) {
-				for (int pixelColumn = 0; pixelColumn < 8; pixelColumn++) {
-					paletteBuffer[(tileRow<<3) + pixelRow][         (tileColumn<<3) + pixelColumn] =
-						*ppuread(0x3f00 + (tileRow << 4) + tileColumn);
-				}
-			}
-		}
-	}
-}
-*/
 
 static uint8_t ppureg = 0, vbuff = 0;
 uint8_t read_ppu_register(uint16_t addr) {
@@ -636,7 +540,7 @@ uint8_t read_ppu_register(uint16_t addr) {
                 tmpval8 = secOam[(nSprite2 << 2) + nData2];
             else if (ppudot < 321) {
                 cSprite = ((ppudot >> 3) & 0x07);
-                tmpval8 = secOam + (cSprite << 2);
+                tmpval8 = secOam[cSprite << 2];
             } else
                 tmpval8 = oam[ppuOamAddress];
         }

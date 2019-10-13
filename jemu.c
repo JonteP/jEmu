@@ -36,7 +36,7 @@ int main() {
 }
 
 void machine_menu_option(int option) {
-	switch(option & 0xf) {
+	switch(option & 0x0f) {
 	case 1:
 		currentMachine = &ntsc_jp;
 		break;
