@@ -16,7 +16,6 @@
 #include "../my_sdl.h" //render_frame
 #include "../cpu/6502.h" //irqPulled
 #include "../nes/nescartridge.h" //cart
-#include "../nes/nesemu.h" //vdp_wait
 
 struct ppuDisplayMode ntscMode = { 256, 240, NTSC_SCANLINES };
 struct ppuDisplayMode  palMode = { 256, 240,  PAL_SCANLINES };
@@ -68,27 +67,7 @@ static const uint8_t smoothFbx[] = {
     0xC4, 0xF6, 0xF6, 0xBE, 0xC1, 0xBE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-//Unknown source?
-static const uint8_t colarray[] = {
-    124, 124, 124,   0,   0, 252,   0,   0, 188,  68,  40, 188,
-    148,   0, 132, 168,   0,  32, 168,  16,   0, 136,  20,   0,
-     80,  48,   0,   0, 120,   0,   0, 104,   0,   0,  88,   0,
-      0,  64,  88,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-    188, 188, 188,   0, 120, 248,   0,  88, 248, 104,  68, 252,
-    216,   0, 204, 228,   0,  88, 248,  56,   0, 228,  92,  16,
-    172, 124,   0,   0, 184,   0,   0, 168,   0,   0, 168,  68,
-      0, 136, 136,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-    248, 248, 248,  60, 188, 252, 104, 136, 252, 152, 120, 248,
-    248, 120, 248, 248,  88, 152, 248, 120,  88, 252, 160,  68,
-    248, 184,   0, 184, 248,  24,  88, 216,  84,  88, 248, 152,
-      0, 232, 216, 120, 120, 120,   0,   0,   0,   0,   0,   0,
-    252, 252, 252, 164, 228, 252, 184, 184, 248, 216, 184, 248,
-    248, 184, 248, 248, 164, 192, 240, 208, 176, 252, 224, 168,
-    248, 216, 120, 216, 248, 120, 184, 248, 184, 184, 248, 216,
-      0, 252, 252, 248, 216, 248,   0,   0,   0,   0,   0,   0
-};
-
-//Unknown source?
+//The following table was generated using blargg's Full Palette demo
 static const uint8_t colblargg[] = {
      84,  84,  84,   0,  30, 116,   8,  16, 144,  48,   0, 136,
      68,   0, 100,  92,   0,  48,  84,   4,   0,  60,  24,   0,
@@ -204,12 +183,12 @@ void run_ppu (uint16_t ntimes) {
             frame++;
         }
 
-/* VBLANK ONSET */
+//VBLANK ONSET
         if (ppu_vCounter == 241 && ppudot == 1) {
             ppuStatusNmi = 1; /* set vblank */
             vblank_period = 1;
         }
-/* PRERENDER SCANLINE */
+//PRERENDER SCANLINE
         else if (ppu_vCounter == (ppuCurrentMode->scanlines - 1)) {
             if (ppuMask & 0x18)	{
                 (*fetchGraphics[ppudot])();
@@ -230,7 +209,7 @@ void run_ppu (uint16_t ntimes) {
             if (ppudot ==2)
                 ppuStatusNmiDelay = 0;
             else if (ppudot >= 257 && ppudot <= 320) {
-/* (reset OAM) */
+//(reset OAM)
                 ppuOamAddress = 0; /* only if rendering active? */
                 if (ppudot == 257)
                     horizontal_t_to_v();
@@ -240,11 +219,11 @@ void run_ppu (uint16_t ntimes) {
                 if (frame%2 && (ppuMask & 0x18) && ppuCurrentMode->scanlines == NTSC_SCANLINES)
                     ppudot++;
             }
-/* RESET CLOCK COUNTER HERE... */
+//RESET CLOCK COUNTER HERE...
         } else if (ppu_vCounter == 240 && ppudot == 0) {
             ppucc = 0;
         }
-/* RENDERED LINES */
+//RENDERED LINES
         else if (ppu_vCounter < 240) {
             if (!ppu_vCounter && !ppudot)
                 render_frame(ppuScreenBuffer);
@@ -257,7 +236,6 @@ void run_ppu (uint16_t ntimes) {
                 horizontal_t_to_v();
         }
         ntimes--;
-        vdp_wait -= (1 << 16);
     }
 }
 

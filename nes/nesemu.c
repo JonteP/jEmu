@@ -25,8 +25,9 @@
 
 /* TODO:
  * -better sync handling, needs to read ppu one cycle earlier
- * -mappers:
- * 		VRC5
+ * -does not reset properly when loading game?
+ * -VS system
+ * -PC-10
  *
  * Game specific issues:
  * -Battle toads - freezes at random on 2nd level (sprite zero related)
@@ -35,13 +36,16 @@
 float fps;
 uint8_t ctrb = 0, ctrb2 = 0, ctr1 = 0, ctr2 = 0;
 uint8_t openBus;
-uint32_t vdp_wait = 0, apu_wait = 0, fds_wait = 0;
+static uint32_t ppu_wait = 0;
+static uint32_t apu_wait = 0;
+static uint32_t fds_wait = 0;
 uint32_t ppuClockRatio;
 FILE *logfile;
 char *romName;
 
 /* Mapped memory */
-uint8_t *prgSlot[0x8], cpuRam[0x800];
+uint8_t *prgSlot[0x08], cpuRam[0x800], ppuRegs[0x08];
+struct memSlot *cpuMemory[0x10] = {NULL}, defaultSlot = {0, 0, NULL};
 
 //                          MACHINE              BIOS       CART        MASTER CLOCK		VIDEO		REGION		VIDEO CARD		AUDIO CARD		HAS EXPANSION SOUND
 struct machine nes_ntsc = {     NES,             NULL,        "",    NES_NTSC_MASTER,        NTSC,      EXPORT,       PPU_NTSC,       APU_NTSC,                       0 },
@@ -61,6 +65,19 @@ int nesemu() {
 
     //hook up general
     reset_emulation = &nes_reset_emulation;
+
+    //map mermory
+    for(int i = 0; i < 0x10; i++) {
+        free(cpuMemory[i]);
+        cpuMemory[i] = malloc(sizeof(cpuMemory));
+        *cpuMemory[i] = defaultSlot;
+    }
+    cpuMemory[0x0]->mask = 0x7ff;
+    cpuMemory[0x0]->writable = 1;
+    cpuMemory[0x0]->memory = cpuRam;
+    cpuMemory[0x1]->mask = 0x7ff;
+    cpuMemory[0x1]->writable = 1;
+    cpuMemory[0x1]->memory = cpuRam;
 
     //hook up cpu function
     _6502_cpuread = &nes_6502_cpuread;
@@ -168,7 +185,7 @@ void save_state() {
     char *stateName = strdup(romName);
     sprintf(stateName + strlen(stateName) - 3, "sta");
     FILE *stateFile = fopen(stateName, "w");
-    fwrite(prgBank, sizeof(prgBank), 1, stateFile);
+//    fwrite(prgBank, sizeof(prgBank), 1, stateFile);
     fwrite(cpuRam, sizeof(cpuRam), 1, stateFile);
 /*    fwrite(&cpuA, sizeof(cpuA), 1, stateFile);
     fwrite(&cpuX, sizeof(cpuX), 1, stateFile);
@@ -176,7 +193,7 @@ void save_state() {
     fwrite(&cpuP, sizeof(cpuP), 1, stateFile);
     fwrite(&cpuS, sizeof(cpuS), 1, stateFile);
     fwrite(&cpuPC, sizeof(cpuPC), 1, stateFile);*/
-    fwrite(chrBank, sizeof(chrBank), 1, stateFile);
+ //   fwrite(chrBank, sizeof(chrBank), 1, stateFile);
     fwrite(chrSource, sizeof(chrSource), 1, stateFile);
     fwrite(oam, sizeof(oam), 1, stateFile);
     fwrite(nameSlot, sizeof(nameSlot), 1, stateFile);
@@ -204,7 +221,7 @@ void load_state() {
     FILE *stateFile = fopen(stateName, "r");
     /* TODO: check for existing save */
     int readErr = 0;
-    readErr |= fread(prgBank, sizeof(prgBank), 1, stateFile);
+//    readErr |= fread(prgBank, sizeof(prgBank), 1, stateFile);
     readErr |= fread(cpuRam, sizeof(cpuRam), 1, stateFile);
 /*    readErr |= fread(&cpuA, sizeof(cpuA), 1, stateFile);
     readErr |= fread(&cpuX, sizeof(cpuX), 1, stateFile);
@@ -212,7 +229,7 @@ void load_state() {
     readErr |= fread(&cpuP, sizeof(cpuP), 1, stateFile);
     readErr |= fread(&cpuS, sizeof(cpuS), 1, stateFile);
     readErr |= fread(&cpuPC, sizeof(cpuPC), 1, stateFile);*/
-    readErr |= fread(chrBank, sizeof(chrBank), 1, stateFile);
+//    readErr |= fread(chrBank, sizeof(chrBank), 1, stateFile);
     readErr |= fread(chrSource, sizeof(chrSource), 1, stateFile);
     readErr |= fread(oam, sizeof(oam), 1, stateFile);
     readErr |= fread(nameSlot, sizeof(nameSlot), 1, stateFile);
@@ -238,7 +255,7 @@ void load_state() {
 
 //6502 functions
 
-uint8_t s = 0;
+uint8_t s = 0; //TODO: may need to restore related function
 
 uint8_t nes_6502_cpuread(uint16_t address) {
     if (address >= 0x8000) {
@@ -256,7 +273,7 @@ uint8_t nes_6502_cpuread(uint16_t address) {
         else
             return (address >> 4); /* open bus */
     } else if (address < 0x2000)
-        return cpuRam[address & 0x7ff];
+        return cpuMemory[address >> 12]->memory[address & cpuMemory[address >> 12]->mask];
     else if (address >= 0x2000 && address < 0x4000)
         return read_ppu_register(address);
     else if (address >= 0x4000 && address < 0x4020)
@@ -274,14 +291,14 @@ uint8_t nes_6502_cpuread(uint16_t address) {
 
 void nes_6502_cpuwrite(uint16_t address, uint8_t value) {
     if (address < 0x2000) {
-        cpuRam[address & 0x7ff] = value;
+        cpuMemory[address >> 12]->memory[address & cpuMemory[address >> 12]->mask] = value;
+        //cpuRam[address & 0x7ff] = value;
     }
     else if (address >= 0x2000 && address < 0x4000)
         write_ppu_register(address, value);
     else if (address >= 0x4000 && address < 0x4020)
         write_cpu_register(address, value);
-    else if (address
-            >= 0x4020&& address < 0x4030 && currentMachine->bios != NULL)
+    else if (address >= 0x4020 && address < 0x4030 && currentMachine->bios != NULL)
         write_fds_register(address, value);
     else if (address >= 0x4020 && address < 0x6000)
         write_mapper_register4(address, value);
@@ -466,16 +483,19 @@ void write_cpu_register(uint16_t address, uint8_t value) {
 }
 
 void nes_6502_addcycles(uint8_t val) {
-    vdp_wait += (val * ppuClockRatio);
+    ppu_wait += (val * ppuClockRatio);
     apu_wait += val;
     fds_wait += val;
     _6502_cycleCounter += val;
 }
 
 void nes_6502_synchronize(int x) {
-    run_ppu((vdp_wait - (x * ppuClockRatio)) >> FRAC_BITS);
+    run_ppu((ppu_wait - (x * ppuClockRatio)) >> FRAC_BITS);
     run_apu(apu_wait - x);
     run_fds(fds_wait - x);
+    ppu_wait = (x * ppuClockRatio);
+    apu_wait = x;
+    fds_wait = x;
 }
 
 //Controller functions

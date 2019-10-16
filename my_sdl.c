@@ -60,19 +60,19 @@ void (*current_options)();
 /*****************/
 
 void init_sdl(sdlSettings *settings) {
-	io_func = &game_io;
-	current_options = &main_menu_option;
-	currentSettings = settings;
-	SDL_version ver;
-	SDL_GetVersion(&ver);
-	printf("Running SDL version: %d.%d.%d\n",ver.major,ver.minor,ver.patch);
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0){
-		printf("SDL_Init failed: %s\n", SDL_GetError());
-		exit(EXIT_FAILURE);
-	}
-	if(TTF_Init()==-1) {
-	    printf("TTF_Init failed: %s\n", TTF_GetError());
-	    exit(EXIT_FAILURE);}
+    io_func = &game_io;
+    current_options = &main_menu_option;
+    currentSettings = settings;
+    SDL_version ver;
+    SDL_GetVersion(&ver);
+    printf("Running SDL version: %d.%d.%d\n",ver.major,ver.minor,ver.patch);
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
+        printf("SDL_Init failed: %s\n", SDL_GetError());
+        exit(EXIT_FAILURE);
+    }
+    if(TTF_Init()==-1) {
+        printf("TTF_Init failed: %s\n", TTF_GetError());
+        exit(EXIT_FAILURE);}
 }
 
 void init_sdl_video(){

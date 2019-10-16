@@ -7,21 +7,21 @@
 #define PAL_SCANLINES		312
 
 struct ppuDisplayMode {
-	uint16_t width;
-	uint16_t height;
-	uint16_t scanlines;
+    uint16_t width;
+    uint16_t height;
+    uint16_t scanlines;
 };
 
 typedef enum version {
-	PPU_NTSC = 0,
-	PPU_PAL	= 1
+    PPU_NTSC = 0,
+    PPU_PAL	= 1
 } PPU_Version;
 
 uint8_t oam[0x100];     //object attribute memory
 uint8_t ciram[0x800];
 uint8_t palette[0x20];
 uint8_t *chrSlot[0x8];  //maps VRAM 0x0000-0x1fff in 0x400B banks
-uint8_t *nameSlot[0x4]; //maps CIRAM upper/lower banks according to mirroring mode
+uint8_t *nameSlot[0x4]; //maps the nametable to CIRAM and/or cartridge RAM according to mirroring mode
 
 uint8_t ppuOamAddress;
 uint32_t nmiFlipFlop;

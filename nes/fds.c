@@ -28,7 +28,6 @@
 #include "nescartridge.h"
 #include "../jemu.h"
 #include "mapper.h"
-#include "nesemu.h"
 #include "../cpu/6502.h"
 
 #define BIOS_SIZE	        0x2000
@@ -318,7 +317,6 @@ void run_fds(uint16_t ntimes) {
             }
         }
         ntimes--;
-        fds_wait--;
     }
 }
 
