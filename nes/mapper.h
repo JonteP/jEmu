@@ -18,7 +18,7 @@ float (*expansion_sound)(void);
 extern uint8_t mapperInt, expSound, wramBit, wramBitVal, extendedPrg;
 uint8_t mapperRead, ntTarget;
 uint8_t read_vrc5_chrrom(uint16_t);
-void write_vrc5_qtram(uint16_t, uint8_t);
+void vrc5_ppu_write_nt(uint16_t, uint8_t);
 extern chrtype_t chrSource[0x8];
 
 #endif

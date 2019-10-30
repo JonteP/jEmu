@@ -88,6 +88,15 @@ int nesemu() {
     cpuMemory[0x4]->mask = 0x1f;
     cpuMemory[0x4]->writable = 1;
     cpuMemory[0x4]->memory = apuRegs;
+    cpuMemory[0x5]->mask = 0;
+    cpuMemory[0x5]->writable = 0;
+    cpuMemory[0x5]->memory = &openBus;
+    cpuMemory[0x6]->mask = 0;
+    cpuMemory[0x6]->writable = 0;
+    cpuMemory[0x6]->memory = &openBus;
+    cpuMemory[0x7]->mask = 0;
+    cpuMemory[0x7]->writable = 0;
+    cpuMemory[0x7]->memory = &openBus;
 
     //hook up cpu function
     _6502_cpuread = &nes_6502_cpuread;

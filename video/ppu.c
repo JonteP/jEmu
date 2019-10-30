@@ -640,11 +640,9 @@ void ppuwrite(uint16_t address, uint8_t value) {
     if (address < 0x2000) { /* pattern tables */
         if (chrSource[(address >> 10)] == CHR_RAM)
             chrSlot[(address >> 10)][address & 0x3ff] = value;
-    } else if (address >= 0x2000 && address < 0x3f00) /* nametables */
-        if(ntTarget)
-            write_vrc5_qtram(address, value);
-        else
-            nameSlot[(address >> 10) & 3][address & 0x3ff] = value;
+    } else if (address >= 0x2000 && address < 0x3f00) { /* nametables */
+        ppu_write_nt(address,value);
+    }
     else if (address >= 0x3f00) { /* palette RAM */
         if (address == 0x3f10)
             address = 0x3f00;

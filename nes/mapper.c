@@ -1521,13 +1521,16 @@ uint8_t* vrc5_ppu_read_chr(uint16_t address) {
 }
 
 uint8_t* vrc5_ppu_read_nt(uint16_t address) {
-    if(address < 0x23c0)
+    if((address & 0x3ff) < 0x3c0) //exclude writes to attribute table
         qtVal = qtRam[(cart.mirroring ? ((address & 0x800) >> 1) : (address & 0x400)) | (address & 0x3ff)];
     return &nameSlot[(address >> 10) & 3][address & 0x3ff];
 }
 
-void write_vrc5_qtram(uint16_t address, uint8_t value) {
-    qtRam[(cart.mirroring ? ((address & 0x800) >> 1) : (address & 0x400)) | (address & 0x3ff)] = value;
+void vrc5_ppu_write_nt(uint16_t address, uint8_t value) {
+    if(ntTarget)
+        qtRam[(cart.mirroring ? ((address & 0x800) >> 1) : (address & 0x400)) | (address & 0x3ff)] = value;
+    else
+        nameSlot[(address >> 10) & 3][address & 0x3ff] = value;
 }
 
 #define QT_ROWS 16
@@ -2671,12 +2674,12 @@ uint8_t* default_ppu_read_nt(uint16_t address) {
     return &nameSlot[(address >> 10) & 3][address & 0x3ff];
 }
 
-void    default_ppu_write_chr(uint16_t address, uint8_t value) {
+void default_ppu_write_chr(uint16_t address, uint8_t value) {
 
 }
 
-void    default_ppu_write_nt(uint16_t address, uint8_t value) {
-
+void default_ppu_write_nt(uint16_t address, uint8_t value) {
+    nameSlot[(address >> 10) & 3][address & 0x3ff] = value;
 }
 
 void null_function() {}
@@ -2830,6 +2833,7 @@ void init_mapper() {
         read_mapper_register = &vrc5_read;
         ppu_read_chr = &vrc5_ppu_read_chr;
         ppu_read_nt = &vrc5_ppu_read_nt;
+        ppu_write_nt = &vrc5_ppu_write_nt;
         irq_cpu_clocked = &vrc5_irq;
     }
     else if (!strcmp(cart.slot,"nina006")) {
