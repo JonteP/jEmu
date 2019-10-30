@@ -48,9 +48,13 @@ static uint8_t prgBank[8];
 static uint8_t chrBank[8];
 chrtype_t chrSource[0x8];
 
-static inline void null_irq();
+static inline void null_function();
 static inline void write_null(uint16_t, uint8_t);
 static inline uint8_t read_null(uint16_t);
+static uint8_t* default_ppu_read_chr(uint16_t);
+static uint8_t* default_ppu_read_nt(uint16_t);
+static void    default_ppu_write_chr(uint16_t, uint8_t);
+static void    default_ppu_write_nt(uint16_t, uint8_t);
 
 /*-----------------------------------NINTENDO------------------------------------*/
 
@@ -368,10 +372,10 @@ void mmc3_prg_bank_switch() {
 void mmc3_chr_bank_switch() {
     if (mmc3BankSelect & 0x80) {
         if (!strcmp(cart.slot,"txsrom")) {
-            nameSlot[0] = (mmc3Reg[2] & 0x80) ? ciram : (ciram + 0x400);
-            nameSlot[1] = (mmc3Reg[3] & 0x80) ? ciram : (ciram + 0x400);
-            nameSlot[2] = (mmc3Reg[4] & 0x80) ? ciram : (ciram + 0x400);
-            nameSlot[3] = (mmc3Reg[5] & 0x80) ? ciram : (ciram + 0x400);
+            nameSlot[0] = (mmc3Reg[2] & 0x80) ? ciRam : (ciRam + 0x400);
+            nameSlot[1] = (mmc3Reg[3] & 0x80) ? ciRam : (ciRam + 0x400);
+            nameSlot[2] = (mmc3Reg[4] & 0x80) ? ciRam : (ciRam + 0x400);
+            nameSlot[3] = (mmc3Reg[5] & 0x80) ? ciRam : (ciRam + 0x400);
         }
         chrBank[0] = mmc3Reg[2];
         chrBank[1] = mmc3Reg[3];
@@ -392,10 +396,10 @@ void mmc3_chr_bank_switch() {
     }
     else if (!(mmc3BankSelect & 0x80)) {
         if (!strcmp(cart.slot,"txsrom")) {
-            nameSlot[0] = (mmc3Reg[0] & 0x80) ? ciram : (ciram + 0x400);
-            nameSlot[1] = (mmc3Reg[0] & 0x80) ? ciram : (ciram + 0x400);
-            nameSlot[2] = (mmc3Reg[1] & 0x80) ? ciram : (ciram + 0x400);
-            nameSlot[3] = (mmc3Reg[1] & 0x80) ? ciram : (ciram + 0x400);
+            nameSlot[0] = (mmc3Reg[0] & 0x80) ? ciRam : (ciRam + 0x400);
+            nameSlot[1] = (mmc3Reg[0] & 0x80) ? ciRam : (ciRam + 0x400);
+            nameSlot[2] = (mmc3Reg[1] & 0x80) ? ciRam : (ciRam + 0x400);
+            nameSlot[3] = (mmc3Reg[1] & 0x80) ? ciRam : (ciRam + 0x400);
         }
         chrBank[0] = (mmc3Reg[0] & 0xfe);
         chrBank[1] = (mmc3Reg[0] | 0x01);
@@ -575,7 +579,7 @@ void mapper_bf909x(uint16_t address, uint8_t value) {
     case 0x8000:
         if (cart.mirroring == 5) {
             printf("%02x\n",value);
-            nameSlot[0] = (value & 0x10) ? (ciram + 0x400) : ciram;
+            nameSlot[0] = (value & 0x10) ? (ciRam + 0x400) : ciRam;
             nameSlot[1] = nameSlot[0];
             nameSlot[2] = nameSlot[0];
             nameSlot[3] = nameSlot[0];
@@ -902,8 +906,8 @@ void reset_lrog017() {
     chr_bank_switch();
     nameSlot[0] = chrRam + 0x1800;
     nameSlot[1] = chrRam + 0x1c00;
-    nameSlot[2] = ciram;
-    nameSlot[3] = ciram + 0x400;
+    nameSlot[2] = ciRam;
+    nameSlot[3] = ciRam + 0x400;
 }
 
 /*-----------------------------------JALECO------------------------------------*/
@@ -1392,6 +1396,171 @@ void vrc3_irq() {
 }
 
 /////////////////////////////////////
+//              VRC 5 +            //
+//            KONAMI-QT            //
+/////////////////////////////////////
+
+static uint8_t vrc5_irqControl;
+static uint16_t vrc5_irqLatch;
+static uint16_t vrc5_irqCounter;
+static uint8_t qtRam[0x800];
+static uint8_t vrc5_tilePosition;
+static uint8_t vrc5_tileAttribute;
+static uint8_t vrc5_column;
+static uint8_t vrc5_row;
+static uint8_t ciramByte;
+static uint8_t qtramByte;
+static uint8_t qtVal;
+static void mapper_vrc5(uint16_t, uint8_t);
+static void vrc5_irq(void);
+static uint8_t vrc5_read(uint16_t);
+static void kanji_decoder();
+uint8_t* vrc5_ppu_read_chr(uint16_t);
+uint8_t* vrc5_ppu_read_nt(uint16_t);
+
+void mapper_vrc5(uint16_t address, uint8_t value) {
+    switch(address & 0xff00) {
+    case 0xd000:
+        cpuMemory[0x6]->memory = ((value & 0x08) ? wram : bwram) + ((value & 0x01) << 12);
+        break;
+    case 0xd100:
+        cpuMemory[0x7]->memory = ((value & 0x08) ? wram : bwram) + ((value & 0x01) << 12);
+        break;
+    case 0xd200: //PRG-ROM Bank Select, 0x8000 (write)
+        prgBank[0] = (value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1);
+        prgBank[1] = prgBank[0] + 1;
+        cpuMemory[0x8]->memory = prg + ((prgBank[0] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0x9]->memory = prg + ((prgBank[1] & (cart.pSlots - 1)) << 12);
+        break;
+    case 0xd300:
+        prgBank[2] = (value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1);
+        prgBank[3] = prgBank[0] + 1;
+        cpuMemory[0xa]->memory = prg + ((prgBank[2] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0xb]->memory = prg + ((prgBank[3] & (cart.pSlots - 1)) << 12);
+        break;
+    case 0xd400:
+        prgBank[4] = (value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1);
+        prgBank[5] = prgBank[0] + 1;
+        cpuMemory[0xc]->memory = prg + ((prgBank[4] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0xd]->memory = prg + ((prgBank[5] & (cart.pSlots - 1)) << 12);
+        break;
+    case 0xd500: //CHR-RAM Bank Select
+        chrSlot[0] = chrRam + ((value & 0x01) << 12);
+        chrSlot[1] = chrRam + ((value & 0x01) << 12) + 0x400;
+        chrSlot[2] = chrRam + ((value & 0x01) << 12) + 0x800;
+        chrSlot[3] = chrRam + ((value & 0x01) << 12) + 0xc00;
+        chrSource[0] = CHR_RAM;
+        chrSource[1] = CHR_RAM;
+        chrSource[2] = CHR_RAM;
+        chrSource[3] = CHR_RAM;
+        break;
+    case 0xd600: //IRQ Latch Write, LSB
+        vrc5_irqLatch = (vrc5_irqLatch & 0xff00) | value;
+        break;
+    case 0xd700: //IRQ Latch Write, MSB
+        vrc5_irqLatch = (vrc5_irqLatch & 0x00ff) | (value << 8);
+        break;
+    case 0xd800: //IRQ Acknowledge
+        mapperInt = 0;
+        vrc5_irqControl = (vrc5_irqControl << 1) | (vrc5_irqControl & 0x01);
+        break;
+    case 0xd900: //IRQ Control
+        vrc5_irqControl = value & 0x03;
+        if(vrc5_irqControl & 0x02)
+            vrc5_irqCounter = vrc5_irqLatch;
+        mapperInt = 0;
+        break;
+    case 0xda00: //Nametable Control
+        cart.mirroring = (value & 2) ? H_MIRROR : V_MIRROR;
+        ntTarget = value & 0x01;
+        break;
+    case 0xdb00:
+        vrc5_tilePosition = value & 0x03;
+        vrc5_tileAttribute = value & 0x04;
+        break;
+    case 0xdc00: //Character Translation Output, tile (read)
+        vrc5_column = value;
+        break;
+    case 0xdd00: //Character Translation Output, bank (read)
+        vrc5_row = value;
+        break;
+    default:
+        break;
+    }
+}
+
+uint8_t vrc5_read(uint16_t address) {
+    switch(address & 0xff00) {
+    case 0xdc00:
+        kanji_decoder();
+        mapperRead = 1;
+        return ciramByte;
+    case 0xdd00:
+        kanji_decoder();
+        mapperRead = 1;
+        return qtramByte;
+    default:
+        mapperRead = 0;
+        return 0;
+    }
+}
+
+uint8_t retVal;
+uint8_t* vrc5_ppu_read_chr(uint16_t address) {
+    if(qtVal & 0x40) {
+        if(address & 0x08) {
+            retVal = (qtVal & 0x80) ? 0xFF : 0x00;
+            return &retVal;
+        }
+
+        else
+            return &chrRom[((qtVal & 0x3f) << 12) | (address & ~0x1000)];
+    }
+    else
+        return &chrSlot[(address >> 10)][address & 0x3ff];
+}
+
+uint8_t* vrc5_ppu_read_nt(uint16_t address) {
+    if(address < 0x23c0)
+        qtVal = qtRam[(cart.mirroring ? ((address & 0x800) >> 1) : (address & 0x400)) | (address & 0x3ff)];
+    return &nameSlot[(address >> 10) & 3][address & 0x3ff];
+}
+
+void write_vrc5_qtram(uint16_t address, uint8_t value) {
+    qtRam[(cart.mirroring ? ((address & 0x800) >> 1) : (address & 0x400)) | (address & 0x3ff)] = value;
+}
+
+#define QT_ROWS 16
+#define QT_COLS 32
+static const uint8_t conv_tbl[4][8] = {
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x40, 0x10, 0x28, 0x00, 0x18, 0x30 },
+    { 0x00, 0x00, 0x48, 0x18, 0x30, 0x08, 0x20, 0x38 },
+    { 0x00, 0x00, 0x80, 0x20, 0x38, 0x10, 0x28, 0xB0 }
+};
+
+void kanji_decoder() {
+    uint8_t tabl = conv_tbl[(vrc5_column >> 5) & 3][(vrc5_row & 0x7F) >> 4];
+    qtramByte = 0x40 | (tabl & 0x3f) | ((vrc5_row >> 1) & 7) | (vrc5_tileAttribute << 5);
+    ciramByte = ((vrc5_row & 0x01) << 7) | ((vrc5_column & 0x1f) << 2) | vrc5_tilePosition;
+    if(tabl & 0x40)
+        qtramByte &= 0xfb;
+    else if(tabl & 0x80)
+        qtramByte |= 0x04;
+}
+
+void vrc5_irq() {
+    if(vrc5_irqControl & 0x02) {
+        if(!vrc5_irqCounter) {
+            mapperInt = 1;
+            vrc5_irqCounter = vrc5_irqLatch;
+        }
+        else
+            vrc5_irqCounter++;
+    }
+}
+
+/////////////////////////////////////
 //              VRC 6              //
 /////////////////////////////////////
 
@@ -1620,11 +1789,16 @@ static uint16_t namco163IrqCounter = 0;
 uint8_t namco163_read (uint16_t address) {
     switch (address & 0xf800) {
     case 0x5000:
+        mapperRead = 1;
         return (namco163IrqCounter & 0xff);
     case 0x5800:
+        mapperRead = 1;
         return ((namco163IrqCounter & 0x7f00) >> 8);
+    default:
+        mapperRead = 0;
+        return 0;
     }
-    return 0;
+
 }
 
 void mapper_namco163(uint16_t address, uint8_t value) {
@@ -1675,25 +1849,25 @@ void mapper_namco163(uint16_t address, uint8_t value) {
         break;
     case 0xc000: //NT 0 select
         if (value >= 0xe0)
-            nameSlot[0] = ((value%2) ? ciram + 0x400 : ciram);
+            nameSlot[0] = ((value%2) ? ciRam + 0x400 : ciRam);
         else
             nameSlot[0] = &chrRom[((value & ((cart.chrSize >> 10) - 1)) << 10)];
         break;
     case 0xc800: //NT 1 select
         if (value >= 0xe0)
-            nameSlot[1] = ((value%2) ? ciram + 0x400 : ciram);
+            nameSlot[1] = ((value%2) ? ciRam + 0x400 : ciRam);
         else
             nameSlot[1] = &chrRom[((value & ((cart.chrSize >> 10) - 1)) << 10)];
         break;
     case 0xd000: //NT 2 select
         if (value >= 0xe0)
-            nameSlot[2] = ((value%2) ? ciram + 0x400 : ciram);
+            nameSlot[2] = ((value%2) ? ciRam + 0x400 : ciRam);
         else
             nameSlot[2] = &chrRom[((value & ((cart.chrSize >> 10) - 1)) << 10)];
         break;
     case 0xd800: //NT 3 select
         if (value >= 0xe0)
-            nameSlot[3] = ((value%2) ? ciram + 0x400 : ciram);
+            nameSlot[3] = ((value%2) ? ciRam + 0x400 : ciRam);
         else
             nameSlot[3] = &chrRom[((value & ((cart.chrSize >> 10) - 1)) << 10)];
         break;
@@ -1730,14 +1904,14 @@ void namco163_irq() {
 }
 
 void namco163_chr_bank_switch() {
-    chrSlot[0] = (namco163CramEnable0 || (namco163Chr0 < 0xe0)) ? &chrRom[((namco163Chr0 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr0%2) ? ciram + 0x400 : ciram);
-    chrSlot[1] = (namco163CramEnable0 || (namco163Chr1 < 0xe0)) ? &chrRom[((namco163Chr1 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr1%2) ? ciram + 0x400 : ciram);
-    chrSlot[2] = (namco163CramEnable0 || (namco163Chr2 < 0xe0)) ? &chrRom[((namco163Chr2 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr2%2) ? ciram + 0x400 : ciram);
-    chrSlot[3] = (namco163CramEnable0 || (namco163Chr3 < 0xe0)) ? &chrRom[((namco163Chr3 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr3%2) ? ciram + 0x400 : ciram);
-    chrSlot[4] = (namco163CramEnable1 || (namco163Chr4 < 0xe0)) ? &chrRom[((namco163Chr4 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr4%2) ? ciram + 0x400 : ciram);
-    chrSlot[5] = (namco163CramEnable1 || (namco163Chr5 < 0xe0)) ? &chrRom[((namco163Chr5 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr5%2) ? ciram + 0x400 : ciram);
-    chrSlot[6] = (namco163CramEnable1 || (namco163Chr6 < 0xe0)) ? &chrRom[((namco163Chr6 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr6%2) ? ciram + 0x400 : ciram);
-    chrSlot[7] = (namco163CramEnable1 || (namco163Chr7 < 0xe0)) ? &chrRom[((namco163Chr7 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr7%2) ? ciram + 0x400 : ciram);
+    chrSlot[0] = (namco163CramEnable0 || (namco163Chr0 < 0xe0)) ? &chrRom[((namco163Chr0 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr0%2) ? ciRam + 0x400 : ciRam);
+    chrSlot[1] = (namco163CramEnable0 || (namco163Chr1 < 0xe0)) ? &chrRom[((namco163Chr1 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr1%2) ? ciRam + 0x400 : ciRam);
+    chrSlot[2] = (namco163CramEnable0 || (namco163Chr2 < 0xe0)) ? &chrRom[((namco163Chr2 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr2%2) ? ciRam + 0x400 : ciRam);
+    chrSlot[3] = (namco163CramEnable0 || (namco163Chr3 < 0xe0)) ? &chrRom[((namco163Chr3 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr3%2) ? ciRam + 0x400 : ciRam);
+    chrSlot[4] = (namco163CramEnable1 || (namco163Chr4 < 0xe0)) ? &chrRom[((namco163Chr4 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr4%2) ? ciRam + 0x400 : ciRam);
+    chrSlot[5] = (namco163CramEnable1 || (namco163Chr5 < 0xe0)) ? &chrRom[((namco163Chr5 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr5%2) ? ciRam + 0x400 : ciRam);
+    chrSlot[6] = (namco163CramEnable1 || (namco163Chr6 < 0xe0)) ? &chrRom[((namco163Chr6 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr6%2) ? ciRam + 0x400 : ciRam);
+    chrSlot[7] = (namco163CramEnable1 || (namco163Chr7 < 0xe0)) ? &chrRom[((namco163Chr7 & ((cart.chrSize >> 10) - 1)) << 10)] : ((namco163Chr7%2) ? ciRam + 0x400 : ciRam);
 }
 
 /////////////////////////////////////
@@ -1750,10 +1924,10 @@ static uint8_t namcot34xxSelect, namcot34xxReg[0x8];
 void mapper_namcot34xx(uint16_t address, uint8_t value) {
     if (cart.mirroring == 5) {
         int mirrorbit = (value & 0x40);
-        nameSlot[0] = (ciram + (mirrorbit ? 0x400 : 0));
-        nameSlot[1] = (ciram + (mirrorbit ? 0x400 : 0));
-        nameSlot[2] = (ciram + (mirrorbit ? 0x400 : 0));
-        nameSlot[3] = (ciram + (mirrorbit ? 0x400 : 0));
+        nameSlot[0] = (ciRam + (mirrorbit ? 0x400 : 0));
+        nameSlot[1] = (ciRam + (mirrorbit ? 0x400 : 0));
+        nameSlot[2] = (ciRam + (mirrorbit ? 0x400 : 0));
+        nameSlot[3] = (ciRam + (mirrorbit ? 0x400 : 0));
     }
     if ((address & 0xe001) < 0xa000) {
         if (!(address%2)) { //Bank select (0x8000)
@@ -1769,10 +1943,10 @@ void mapper_namcot34xx(uint16_t address, uint8_t value) {
 
 void namcot34xx_bank_switch() {
     if (!strcmp(cart.slot,"namcot_3425")) {
-        nameSlot[0] = (namcot34xxReg[0] & 0x20) ? ciram : (ciram + 0x400);
-        nameSlot[1] = (namcot34xxReg[0] & 0x20) ? ciram : (ciram + 0x400);
-        nameSlot[2] = (namcot34xxReg[1] & 0x20) ? ciram : (ciram + 0x400);
-        nameSlot[3] = (namcot34xxReg[1] & 0x20) ? ciram : (ciram + 0x400);
+        nameSlot[0] = (namcot34xxReg[0] & 0x20) ? ciRam : (ciRam + 0x400);
+        nameSlot[1] = (namcot34xxReg[0] & 0x20) ? ciRam : (ciRam + 0x400);
+        nameSlot[2] = (namcot34xxReg[1] & 0x20) ? ciRam : (ciRam + 0x400);
+        nameSlot[3] = (namcot34xxReg[1] & 0x20) ? ciRam : (ciRam + 0x400);
     }
     if (!strcmp(cart.slot,"namcot_3446")) {
         chrBank[0] = (namcot34xxReg[2] << 1);
@@ -2193,12 +2367,14 @@ void mapper_tc0190(uint16_t address, uint8_t value) {
         }
         prgBank[0] = ((value & 0x3f) << 1);
         prgBank[1] = prgBank[0] + 1;
-        prg_bank_switch();
+        cpuMemory[0x8]->memory = prg + ((prgBank[0] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0x9]->memory = prg + ((prgBank[1] & (cart.pSlots - 1)) << 12);
         break;
     case 0x8001: //PRG 1
         prgBank[2] = ((value & 0x3f) << 1);
         prgBank[3] = prgBank[2] + 1;
-        prg_bank_switch();
+        cpuMemory[0xa]->memory = prg + ((prgBank[2] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0xb]->memory = prg + ((prgBank[3] & (cart.pSlots - 1)) << 12);
         break;
     case 0x8002: //CHR 0
         chrBank[0] = (value << 1);
@@ -2227,20 +2403,20 @@ void mapper_tc0190(uint16_t address, uint8_t value) {
         chr_bank_switch();
         break;
     case 0xc000: //IRQ Reload
-        printf("Writing to register c000: %02x\n",value);
+        //printf("Writing to register c000: %02x\n",value);
         tc0190IrqReload = 1;
         tc0190IrqLatch = (value^0xff);
         break;
     case 0xc001: //IRQ Clear
-        printf("Writing to register c001: %02x\n",value);
+        //printf("Writing to register c001: %02x\n",value);
         tc0190IrqCounter = 0;
         break;
     case 0xc002: //IRQ Enable
-        printf("Writing to register c002: %02x\n",value);
+        //printf("Writing to register c002: %02x\n",value);
         tc0190IrqEnable = 1;
         break;
     case 0xc003: //IRQ Acknowledge
-        printf("Writing to register c003: %02x\n",value);
+        //printf("Writing to register c003: %02x\n",value);
         tc0190IrqEnable = 0;
         mapperInt = 0;
         break;
@@ -2319,7 +2495,7 @@ void mapper_x1005(uint16_t address, uint8_t value) {
 /*----------------------------------------------------------------------------*/
 
 void reset_default() {
-    if (cart.chrSize) {
+    if (cart.chrSize && !cart.cramSize) {
         chrSource[0] = CHR_ROM;
         chrSource[1] = CHR_ROM;
         chrSource[2] = CHR_ROM;
@@ -2360,22 +2536,82 @@ void reset_default() {
     nametable_mirroring(cart.mirroring);
 }
 
-
-//TODO: extend to be 6502 memory map
 void prg_bank_switch() {
+//default nes cartridge mapping
     if(cart.prgSize) {
-        prgSlot[0] = &prg[((prgBank[0] & (cart.pSlots - 1)) << 12)];
-        prgSlot[1] = &prg[((prgBank[1] & (cart.pSlots - 1)) << 12)];
-        prgSlot[2] = &prg[((prgBank[2] & (cart.pSlots - 1)) << 12)];
-        prgSlot[3] = &prg[((prgBank[3] & (cart.pSlots - 1)) << 12)];
-        prgSlot[4] = &prg[((prgBank[4] & (cart.pSlots - 1)) << 12)];
-        prgSlot[5] = &prg[((prgBank[5] & (cart.pSlots - 1)) << 12)];
-        prgSlot[6] = &prg[((prgBank[6] & (cart.pSlots - 1)) << 12)];
-        prgSlot[7] = &prg[((prgBank[7] & (cart.pSlots - 1)) << 12)];
+        if(wramEnable) {
+            cpuMemory[0x6]->mask = 0xfff;
+            cpuMemory[0x6]->writable = 1;
+            cpuMemory[0x6]->memory = wramSource;
+            cpuMemory[0x7]->mask = 0xfff;
+            cpuMemory[0x7]->writable = 1;
+            cpuMemory[0x7]->memory = wramSource + 0x1000;
+        }
+        else {
+            cpuMemory[0x6]->mask = 0;
+            cpuMemory[0x6]->writable = 0;
+            cpuMemory[0x6]->memory = &openBus;
+            cpuMemory[0x7]->mask = 0;
+            cpuMemory[0x7]->writable = 0;
+            cpuMemory[0x7]->memory = &openBus;
+        }
+        cpuMemory[0x8]->mask = 0xfff;
+        cpuMemory[0x8]->writable = 0;
+        cpuMemory[0x8]->memory = prg + ((prgBank[0] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0x9]->mask = 0xfff;
+        cpuMemory[0x9]->writable = 0;
+        cpuMemory[0x9]->memory = prg + ((prgBank[1] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0xa]->mask = 0xfff;
+        cpuMemory[0xa]->writable = 0;
+        cpuMemory[0xa]->memory = prg + ((prgBank[2] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0xb]->mask = 0xfff;
+        cpuMemory[0xb]->writable = 0;
+        cpuMemory[0xb]->memory = prg + ((prgBank[3] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0xc]->mask = 0xfff;
+        cpuMemory[0xc]->writable = 0;
+        cpuMemory[0xc]->memory = prg + ((prgBank[4] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0xd]->mask = 0xfff;
+        cpuMemory[0xd]->writable = 0;
+        cpuMemory[0xd]->memory = prg + ((prgBank[5] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0xe]->mask = 0xfff;
+        cpuMemory[0xe]->writable = 0;
+        cpuMemory[0xe]->memory = prg + ((prgBank[6] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0xf]->mask = 0xfff;
+        cpuMemory[0xf]->writable = 0;
+        cpuMemory[0xf]->memory = prg + ((prgBank[7] & (cart.pSlots - 1)) << 12);
     }
+//fds memory map
     else {
-        prgSlot[6] = &fdsBiosRom[0];
-        prgSlot[7] = &fdsBiosRom[0x1000];
+        cpuMemory[0x6]->mask = 0xfff;
+        cpuMemory[0x6]->writable = 1;
+        cpuMemory[0x6]->memory = fdsRam;
+        cpuMemory[0x7]->mask = 0xfff;
+        cpuMemory[0x7]->writable = 1;
+        cpuMemory[0x7]->memory = fdsRam + 0x1000;
+        cpuMemory[0x8]->mask = 0xfff;
+        cpuMemory[0x8]->writable = 1;
+        cpuMemory[0x8]->memory = fdsRam + 0x2000;
+        cpuMemory[0x9]->mask = 0xfff;
+        cpuMemory[0x9]->writable = 1;
+        cpuMemory[0x9]->memory = fdsRam + 0x3000;
+        cpuMemory[0xa]->mask = 0xfff;
+        cpuMemory[0xa]->writable = 1;
+        cpuMemory[0xa]->memory = fdsRam + 0x4000;
+        cpuMemory[0xb]->mask = 0xfff;
+        cpuMemory[0xb]->writable = 1;
+        cpuMemory[0xb]->memory = fdsRam + 0x5000;
+        cpuMemory[0xc]->mask = 0xfff;
+        cpuMemory[0xc]->writable = 1;
+        cpuMemory[0xc]->memory = fdsRam + 0x6000;
+        cpuMemory[0xd]->mask = 0xfff;
+        cpuMemory[0xd]->writable = 1;
+        cpuMemory[0xd]->memory = fdsRam + 0x7000;
+        cpuMemory[0xe]->mask = 0xfff;
+        cpuMemory[0xe]->writable = 0;
+        cpuMemory[0xe]->memory = fdsBiosRom;
+        cpuMemory[0xf]->mask = 0xfff;
+        cpuMemory[0xf]->writable = 0;
+        cpuMemory[0xf]->memory = fdsBiosRom + 0x1000;
     }
 }
 
@@ -2394,47 +2630,70 @@ void chr_bank_switch() {
 void nametable_mirroring(uint8_t mode) {
     switch (mode) {
     case 0: //horizontal
-        nameSlot[0] = ciram;
-        nameSlot[1] = ciram;
-        nameSlot[2] = ciram + 0x400;
-        nameSlot[3] = ciram + 0x400;
+        nameSlot[0] = ciRam;
+        nameSlot[1] = ciRam;
+        nameSlot[2] = ciRam + 0x400;
+        nameSlot[3] = ciRam + 0x400;
         break;
     case 1: //vertical
-        nameSlot[0] = ciram;
-        nameSlot[1] = ciram + 0x400;
-        nameSlot[2] = ciram;
-        nameSlot[3] = ciram + 0x400;
+        nameSlot[0] = ciRam;
+        nameSlot[1] = ciRam + 0x400;
+        nameSlot[2] = ciRam;
+        nameSlot[3] = ciRam + 0x400;
         break;
     case 2: //one-page low
     case 5:
-        nameSlot[0] = ciram;
-        nameSlot[1] = ciram;
-        nameSlot[2] = ciram;
-        nameSlot[3] = ciram;
+        nameSlot[0] = ciRam;
+        nameSlot[1] = ciRam;
+        nameSlot[2] = ciRam;
+        nameSlot[3] = ciRam;
         break;
     case 3: //one-page high
-        nameSlot[0] = ciram + 0x400;
-        nameSlot[1] = ciram + 0x400;
-        nameSlot[2] = ciram + 0x400;
-        nameSlot[3] = ciram + 0x400;
+        nameSlot[0] = ciRam + 0x400;
+        nameSlot[1] = ciRam + 0x400;
+        nameSlot[2] = ciRam + 0x400;
+        nameSlot[3] = ciRam + 0x400;
         break;
     case 4: //4-screen, hardwired
-        nameSlot[0] = ciram;
-        nameSlot[1] = ciram + 0x400;
+        nameSlot[0] = ciRam;
+        nameSlot[1] = ciRam + 0x400;
         nameSlot[2] = chrRam;
         nameSlot[3] = chrRam + 0x400;
         break;
     }
 }
 
-void null_irq() {}
+uint8_t* default_ppu_read_chr(uint16_t address) {
+    return &chrSlot[(address >> 10)][address & 0x3ff];
+}
+
+uint8_t* default_ppu_read_nt(uint16_t address) {
+    return &nameSlot[(address >> 10) & 3][address & 0x3ff];
+}
+
+void    default_ppu_write_chr(uint16_t address, uint8_t value) {
+
+}
+
+void    default_ppu_write_nt(uint16_t address, uint8_t value) {
+
+}
+
+void null_function() {}
 void write_null(uint16_t address, uint8_t value) {}
-uint8_t read_null(uint16_t address) {return 0;}
+uint8_t read_null(uint16_t address) {
+    mapperRead = 0;
+    return 0;
+}
 
 void init_mapper() {
     reset_default();
-    irq_cpu_clocked = &null_irq;
-    irq_ppu_clocked = &null_irq;
+    ppu_read_chr = &default_ppu_read_chr;
+    ppu_read_nt = &default_ppu_read_nt;
+    ppu_write_chr = &default_ppu_write_chr;
+    ppu_write_nt = &default_ppu_write_nt;
+    irq_cpu_clocked = &null_function;
+    irq_ppu_clocked = &null_function;
     read_mapper_register = &read_null;
     write_mapper_register4 = &write_null;
     write_mapper_register6 = &write_null;
@@ -2442,12 +2701,12 @@ void init_mapper() {
     if(!strcmp(cart.slot,"sxrom")   ||
             !strcmp(cart.slot,"sxrom_a") ||
             !strcmp(cart.slot,"sorom")   ||
-            !strcmp(cart.slot,"sorom_a"))  {
-        if ((cart.wramSize+cart.bwramSize) && (!strcmp(cart.mmc1_type,"MMC1A")    ||
+            !strcmp(cart.slot,"sorom_a")) {
+        if ((cart.wramSize+cart.bwramSize) && (!strcmp(cart.mmc1_type,"MMC1A") ||
                 !strcmp(cart.mmc1_type,"MMC1B1")   ||
                 !strcmp(cart.mmc1_type,"MMC1B1-H") ||
                 !strcmp(cart.mmc1_type,"MMC1B2")   ||
-                !strcmp(cart.mmc1_type,"MMC1B3")))   {
+                !strcmp(cart.mmc1_type,"MMC1B3"))) {
             wramEnable = 1;
         }
         write_mapper_register8 = &mapper_mmc1;
@@ -2516,6 +2775,7 @@ void init_mapper() {
         irq_cpu_clocked = &ss88006_irq;
     }
     else if (!strcmp(cart.slot,"namcot_163")) {
+
         write_mapper_register4 = &mapper_namco163;
         write_mapper_register8 = &mapper_namco163;
         read_mapper_register = &namco163_read;
@@ -2564,6 +2824,13 @@ void init_mapper() {
     else if (!strcmp(cart.slot,"vrc3")) {
         write_mapper_register8 = &mapper_vrc3;
         irq_cpu_clocked = &vrc3_irq;
+    }
+    else if (!strcmp(cart.slot,"KONAMI-QTAI")) {
+        write_mapper_register8 = &mapper_vrc5;
+        read_mapper_register = &vrc5_read;
+        ppu_read_chr = &vrc5_ppu_read_chr;
+        ppu_read_nt = &vrc5_ppu_read_nt;
+        irq_cpu_clocked = &vrc5_irq;
     }
     else if (!strcmp(cart.slot,"nina006")) {
         write_mapper_register4 = &mapper_nina36;

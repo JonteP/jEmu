@@ -21,8 +21,8 @@ typedef struct gameFeatures_ {
 	char slot[20];
 	char pcb[30];
 	MirrorMode mirroring;
-	uint8_t pSlots;
-	uint8_t cSlots;
+	uint16_t pSlots;
+	uint16_t cSlots;
 	long chrSize;
 	long prgSize;
 	long wramSize;
@@ -35,10 +35,10 @@ typedef struct gameFeatures_ {
 	long vrc6Prg0;
 	char mmc1_type[20];
 	char mmc3_type[20];
+    uint8_t battery;
 } gameFeatures;
 
 extern gameFeatures cart;
-extern int psize, csize;
 extern uint_fast8_t *prg, *chrRom, *chrRam, *bwram, *wram, *wramSource, mirroring[4][4], wramEnable;
 
 void nes_load_rom(), nes_close_rom();

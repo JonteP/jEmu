@@ -6,6 +6,7 @@
  */
 
 #include "nesemu.h"
+#include <assert.h>
 #include <stdint.h>
 #include <libgen.h>
 #include <stdio.h>
@@ -44,8 +45,8 @@ FILE *logfile;
 char *romName;
 
 /* Mapped memory */
-uint8_t *prgSlot[0x08], cpuRam[0x800], ppuRegs[0x08];
-struct memSlot *cpuMemory[0x10] = {NULL}, defaultSlot = {0, 0, NULL};
+uint8_t *prgSlot[0x08], cpuRam[0x800], ppuRegs[0x08], apuRegs[0x20];
+struct memSlot *cpuMemory[0x10] = {NULL}, *ppuMemory[0x08] = {NULL}, defaultSlot = {0, 0, NULL};
 
 //                          MACHINE              BIOS       CART        MASTER CLOCK		VIDEO		REGION		VIDEO CARD		AUDIO CARD		HAS EXPANSION SOUND
 struct machine nes_ntsc = {     NES,             NULL,        "",    NES_NTSC_MASTER,        NTSC,      EXPORT,       PPU_NTSC,       APU_NTSC,                       0 },
@@ -78,6 +79,15 @@ int nesemu() {
     cpuMemory[0x1]->mask = 0x7ff;
     cpuMemory[0x1]->writable = 1;
     cpuMemory[0x1]->memory = cpuRam;
+    cpuMemory[0x2]->mask = 0x7;
+    cpuMemory[0x2]->writable = 1;
+    cpuMemory[0x2]->memory = ppuRegs;
+    cpuMemory[0x3]->mask = 0x7;
+    cpuMemory[0x3]->writable = 1;
+    cpuMemory[0x3]->memory = ppuRegs;
+    cpuMemory[0x4]->mask = 0x1f;
+    cpuMemory[0x4]->writable = 1;
+    cpuMemory[0x4]->memory = apuRegs;
 
     //hook up cpu function
     _6502_cpuread = &nes_6502_cpuread;
@@ -96,7 +106,7 @@ int nesemu() {
     player1_buttonSelect = &nes_p1select;
 
     strcpy(currentMachine->cartFile,
-            "/home/jonas/git/roms/nes/axrom/btoads.nes");
+            "/home/jonas/git/roms/nes/vrc5/Idemitsu - Space College - Kikenbutsu no Yasashii Butsuri to Kagaku (CAI Gakusyuu System, QTai Hardware) (J)[U][!].nes");
 
     nes_reset_emulation();
 
@@ -197,7 +207,7 @@ void save_state() {
     fwrite(chrSource, sizeof(chrSource), 1, stateFile);
     fwrite(oam, sizeof(oam), 1, stateFile);
     fwrite(nameSlot, sizeof(nameSlot), 1, stateFile);
-    fwrite(ciram, sizeof(ciram), 1, stateFile);
+    fwrite(ciRam, sizeof(ciRam), 1, stateFile);
     fwrite(palette, sizeof(palette), 1, stateFile);
 /*    fwrite(&ppudot, sizeof(ppudot), 1, stateFile);
     fwrite(&ppu_vCounter, sizeof(ppu_vCounter), 1, stateFile);*/
@@ -233,7 +243,7 @@ void load_state() {
     readErr |= fread(chrSource, sizeof(chrSource), 1, stateFile);
     readErr |= fread(oam, sizeof(oam), 1, stateFile);
     readErr |= fread(nameSlot, sizeof(nameSlot), 1, stateFile);
-    readErr |= fread(ciram, sizeof(ciram), 1, stateFile);
+    readErr |= fread(ciRam, sizeof(ciRam), 1, stateFile);
     readErr |= fread(palette, sizeof(palette), 1, stateFile);
 /*    readErr |= fread(&ppudot, sizeof(ppudot), 1, stateFile);
     readErr |= fread(&ppu_vCounter, sizeof(ppu_vCounter), 1, stateFile);*/
@@ -258,43 +268,42 @@ void load_state() {
 uint8_t s = 0; //TODO: may need to restore related function
 
 uint8_t nes_6502_cpuread(uint16_t address) {
-    if (address >= 0x8000) {
-        if(currentMachine->bios != NULL && address < 0xe000)
-            return fdsRam[(address & 0x7fff) + 0x2000];
-        return prgSlot[(address >> 12) & ~8][address & 0xfff];
-    }
-    else if (address >= 0x6000 && address < 0x8000) {
+    openBus = address >> 4; //TODO: correct emulation involves preserving last value read by 6502
+ /*   if (address >= 0x6000 && address < 0x8000) {
         if (wramEnable || extendedPrg) {
             return wramSource[(address & 0x1fff)];
         } else if (wramBit) {
             return (((address >> 4) & 0xfe) | wramBitVal);
-        } else if(currentMachine->bios != NULL)
-            return fdsRam[address & 0x1fff];
+        }
         else
-            return (address >> 4); /* open bus */
-    } else if (address < 0x2000)
-        return cpuMemory[address >> 12]->memory[address & cpuMemory[address >> 12]->mask];
-    else if (address >= 0x2000 && address < 0x4000)
+            return (address >> 4); //open bus
+    } */
+    if (address >= 0x2000 && address < 0x4000)
         return read_ppu_register(address);
     else if (address >= 0x4000 && address < 0x4020)
         return read_cpu_register(address);
-    else if (address
-            >= 0x4030 && address < 0x4040 && currentMachine->bios != NULL)
+    else if (address >= 0x4030 && address < 0x4040 && currentMachine->bios != NULL)
         return read_fds_register(address);
-    else if (address >= 0x4040 && address < 0x6000)
-        return read_mapper_register(address);
-    else {
-        return (address >> 4); /* open bus */
+    uint8_t mapperVal = read_mapper_register(address);
+    if(mapperRead) {
+        printf("read mapper address: %04x\n",address);
+        mapperRead = 0;
+        return mapperVal;
     }
-    return 0;
+ /*   else {
+        return (address >> 4); //open bus
+    }*/
+    struct memSlot *mem = cpuMemory[address >> 12];
+    assert(mem->memory != NULL);
+    return mem->memory[address & mem->mask];
 }
 
 void nes_6502_cpuwrite(uint16_t address, uint8_t value) {
-    if (address < 0x2000) {
-        cpuMemory[address >> 12]->memory[address & cpuMemory[address >> 12]->mask] = value;
-        //cpuRam[address & 0x7ff] = value;
-    }
-    else if (address >= 0x2000 && address < 0x4000)
+    struct memSlot *mem = cpuMemory[address >> 12];
+    assert(mem->memory != NULL);
+    if(mem->writable)
+        mem->memory[address & mem->mask] = value;
+    if (address >= 0x2000 && address < 0x4000)
         write_ppu_register(address, value);
     else if (address >= 0x4000 && address < 0x4020)
         write_cpu_register(address, value);
@@ -304,16 +313,12 @@ void nes_6502_cpuwrite(uint16_t address, uint8_t value) {
         write_mapper_register4(address, value);
     else if (address >= 0x6000 && address < 0x8000) {
         write_mapper_register6(address, value);
-        if (wramEnable && !extendedPrg)
+  /*      if (wramEnable && !extendedPrg)
             wramSource[(address & 0x1fff)] = value;
-        else if (wramBit)
-            wramBitVal = (value & 0x01);
-        else if(currentMachine->bios != NULL)
-            fdsRam[address & 0x1fff] = value;
+        else if (wramBit) //used by VRC2/4
+            wramBitVal = (value & 0x01); */
     } else if (address >= 0x8000) {
         write_mapper_register8(address, value);
-        if(currentMachine->bios != NULL && address < 0xe000)
-            fdsRam[(address & 0x7fff) + 0x2000] = value;
     }
 
 }

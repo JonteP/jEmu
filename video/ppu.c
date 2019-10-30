@@ -617,10 +617,11 @@ void write_ppu_register(uint16_t addr, uint8_t tmpval8) {
 }
 
 uint8_t * ppuread(uint16_t address) {
-    if (address < 0x2000) { /* pattern tables */
-        return &chrSlot[(address >> 10)][address & 0x3ff];
-    } else if (address >= 0x2000 && address < 0x3f00) /* nametables */
-        return &nameSlot[(address >> 10) & 3][address & 0x3ff];
+    if (address < 0x2000) { //pattern tables
+        return ppu_read_chr(address);
+    } else if (address < 0x3f00) { //nametables
+        return ppu_read_nt(address);
+    }
     else if (address >= 0x3f00) { /* palette RAM */
         if (address == 0x3f10)
             address = 0x3f00;
@@ -640,7 +641,10 @@ void ppuwrite(uint16_t address, uint8_t value) {
         if (chrSource[(address >> 10)] == CHR_RAM)
             chrSlot[(address >> 10)][address & 0x3ff] = value;
     } else if (address >= 0x2000 && address < 0x3f00) /* nametables */
-        nameSlot[(address >> 10) & 3][address & 0x3ff] = value;
+        if(ntTarget)
+            write_vrc5_qtram(address, value);
+        else
+            nameSlot[(address >> 10) & 3][address & 0x3ff] = value;
     else if (address >= 0x3f00) { /* palette RAM */
         if (address == 0x3f10)
             address = 0x3f00;

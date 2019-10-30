@@ -1,4 +1,5 @@
 #include "nescartridge.h"
+#include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -8,9 +9,17 @@
 #include "sha.h"
 #include "nesemu.h"
 
+//UNIF
+#define UNIF_TYPE_SIZE      4
+#define UNIF_LENGTH_SIZE    4
+static const uint8_t unifId[4] = {0x55, 0x4e, 0x49, 0x46};
+static uint8_t isUnif;
+
 //iNES
-const uint8_t id[4] = { 0x4e, 0x45, 0x53, 0x1a };
-uint8_t header[0x10];
+static const uint8_t inesId[4] = {0x4e, 0x45, 0x53, 0x1a};
+static uint8_t isInes;
+
+static uint8_t header[0x10];
 
 //XML
 xmlDoc *nesXml;
@@ -19,18 +28,28 @@ xmlChar *sphash = NULL, *schash = NULL;
 uint8_t hashMatch = 0;
 
 //common cartridge related
-gameInfos gameInfo;
 gameFeatures cart;
-int psize, csize;
-unsigned char phash[SHA_DIGEST_LENGTH], chash[SHA_DIGEST_LENGTH];
-uint8_t *prg = NULL, *chrRom = NULL, *chrRam = NULL, *bwram = NULL, *wram = NULL, wramEnable = 0, *wramSource = NULL;
-FILE *romFile, *bwramFile;
+static unsigned char phash[SHA_DIGEST_LENGTH];
+
+//on cartridge memory sources
+uint8_t *prg = NULL;
+uint8_t *bwram = NULL;
+uint8_t *wram = NULL;
+uint8_t wramEnable = 0;
+uint8_t *wramSource = NULL; //TODO: should be made obsolete
+uint8_t *chrRom = NULL;
+uint8_t *chrRam = NULL;
+
+static FILE *romFile;
+static FILE *bwramFile; //backed-up RAM assumed to have same name as ROM with .sav extension
 char *bwramName;
+
+//Nametable mirroring - basically sets the routing of CIRAM A10
 uint8_t mirroring[4][4] =
-	{ { 0, 0, 1, 1 }, 	// horizontal mirroring
-	  { 0, 1, 0, 1 }, 	// vertical mirroring
-	  { 0, 0, 0, 0 },	// one screen, low page
-	  { 1, 1, 1, 1 } };	// one screen, high page
+	{ { 0, 0, 1, 1 }, 	// horizontal mirroring  CIRAM A10 <-> PPU A10
+	  { 0, 1, 0, 1 }, 	// vertical mirroring    CIRAM A10 <-> PPU A11
+	  { 0, 0, 0, 0 },	// one screen, low page  CIRAM A10 <-> Ground
+	  { 1, 1, 1, 1 } };	// one screen, high page CIRAM A10 <-> Vcc
 
 static inline void extract_xml_data(xmlNode * s_node);
 static inline void xml_hash_compare(xmlNode * c_node);
@@ -38,28 +57,108 @@ static inline void parse_xml_file(xmlNode * a_node);
 static inline void load_by_header();
 
 void nes_load_rom(char *rom) {
-    cart.bwramSize = cart.chrSize = cart.cramSize = cart.prgSize = 0;
+    cart.bwramSize = 0;
+    cart.battery = 0;
+    cart.wramSize = 0;
+    cart.chrSize = 0;
+    cart.cramSize = 0;
+    cart.prgSize = 0;
+    cart.chrSize = 0;
+    isInes = 0;
+    isUnif = 0;
     if ((romFile = fopen(rom, "r")) == NULL) {
         printf("Error: No such file\n");
         exit(EXIT_FAILURE);
     }
-    const char *ext = strrchr(rom, '.') + 1;
-    if (!strcmp(ext,"nes")) {
-	//if file has .nes extension
-        fread(header, sizeof(header), 1, romFile);
-        for (int i = 0; i < sizeof(id); i++) {
-            if (header[i] != id[i]) {
-                fprintf(stderr,"Error: Invalid iNES header!\n");
-                exit(EXIT_FAILURE);
+
+	//look for iNES header
+    fread(header, sizeof(header), 1, romFile);
+    for (int i = 0; i < sizeof(inesId); i++) {
+        if (header[i] != inesId[i]) {
+            isInes = 1;
+            break;
+        }
+    }
+    if(!isInes) { //found iNES header
+        cart.prgSize = header[4] * PRG_BANK << 2;
+        cart.chrSize = header[5] * CHR_BANK << 3;
+        free(prg);
+        prg = malloc(cart.prgSize * sizeof(uint8_t));
+        fread(prg, cart.prgSize, 1, romFile);
+        if (cart.chrSize) {
+            free(chrRom);
+            chrRom = malloc(cart.chrSize * sizeof(uint8_t));
+            fread(chrRom, cart.chrSize, 1, romFile);
+        }
+    }
+
+    else { //look for Unif header
+        for (int i = 0; i < sizeof(unifId); i++) {
+            if (header[i] != unifId[i]) {
+                isUnif = 1;
+                break;
             }
         }
-        psize = header[4] * PRG_BANK << 2;
-        csize = header[5] * CHR_BANK << 3;
+        if(!isUnif) { //found Unif header
+            fseek(romFile, 0, SEEK_END);
+            uint32_t fSize = ftell(romFile);
+            char blockType[UNIF_TYPE_SIZE + 1];
+            cart.prgSize = 0;
+            cart.chrSize = 0;
+            uint32_t blockLength;
+            fseek(romFile,0x20,SEEK_SET);
+            while (ftell(romFile) < fSize) {
+                fread(blockType, UNIF_TYPE_SIZE, 1, romFile);
+                blockType[4] = '\0';
+                fread(&blockLength, UNIF_LENGTH_SIZE, 1, romFile);
+                if(!strcmp(blockType, "MAPR")) {
+                    char *map = malloc(blockLength);
+                    fread(map, blockLength, 1, romFile);
+                    strcpy(cart.slot,map);
+                    free(map);
+                }
+                else if(!strcmp(blockType, "NAME")) {
+                    char *name = malloc(blockLength);
+                    fread(name, blockLength, 1, romFile);
+                    printf("Name: %s\n",name);
+                    free(name);
+                }
+                else if(!strcmp(blockType, "TVCI")) {
+                    assert(blockLength == 1);
+                    uint8_t tv;
+                    fread(&tv, blockLength, 1, romFile);
+                }
+                else if(!strncmp(blockType, "PRG", 3)) {
+                    prg = realloc(prg, sizeof(uint8_t) * (cart.prgSize + blockLength));
+                    fread(prg + cart.prgSize, blockLength, 1, romFile);
+                    cart.prgSize += blockLength;
+               }
+                else if(!strncmp(blockType, "CHR", 3)) {
+                    chrRom = realloc(chrRom, sizeof(uint8_t) * (cart.chrSize + blockLength));
+                    fread(chrRom + cart.chrSize, blockLength, 1, romFile);
+                    cart.chrSize += blockLength;
+                }
+                else if(!strcmp(blockType, "BATR")) {
+                    assert(blockLength == 1);
+                    fread(&cart.battery, blockLength, 1, romFile);
+                }
+                else if(!strcmp(blockType, "MIRR")) {
+                    assert(blockLength == 1);
+                    fread(&cart.mirroring, blockLength, 1, romFile);
+                }
+                else
+                    break;
+            }
+        }
+        if(!strcmp(cart.slot, "KONAMI-QTAI")) {
+            cart.bwramSize = 8192;
+            cart.wramSize = 8192;
+            cart.cramSize = 8192;
+        }
     }
-    free(prg);
-    prg = malloc(psize * sizeof(uint8_t));
-    fread(prg, psize, 1, romFile);
-    SHA1(prg,psize,phash);
+
+//look for match in softlist
+    SHA1(prg,cart.prgSize,phash);
     free(sphash);
     sphash = malloc(SHA_DIGEST_LENGTH * 2 + 1);
     for (int i = 0; i<sizeof(phash); i++){
@@ -71,21 +170,15 @@ void nes_load_rom(char *rom) {
     xmlFreeDoc(nesXml);
     xmlCleanupParser();
 
-    if (!hashMatch)
+    if (!hashMatch && !isInes)
         load_by_header();
-    if (cart.chrSize) {
-        free(chrRom);
-        chrRom = malloc(cart.chrSize * sizeof(uint8_t));
-        fread(chrRom, cart.chrSize, 1, romFile);
-    }
+
     if (cart.cramSize) {
         free(chrRam);
         chrRam = malloc(cart.cramSize * sizeof(uint8_t));
     }
     fclose(romFile);
 
-    if (psize < cart.prgSize)
-        cart.prgSize = psize;
     cart.pSlots = ((cart.prgSize) / 0x1000);
     cart.cSlots = ((cart.chrSize) / 0x400);
 
@@ -102,7 +195,7 @@ void nes_load_rom(char *rom) {
         wramSource = bwram;
         wramEnable = 1;
     }
-    else if (cart.wramSize) {
+    if (cart.wramSize) {
         free(wram);
         wram = malloc(cart.wramSize);
         wramSource = wram;
@@ -148,9 +241,7 @@ void set_wram() {
 void load_by_header() {
     uint8_t mapper = ((header[7] & 0xf0) | ((header[6] & 0xf0) >> 4));
     printf("Mapper: %i\n",mapper);
-    cart.prgSize = psize;
-    if (csize) {
-        cart.chrSize = csize;
+    if (cart.chrSize) {
         cart.cramSize = 0;
     }
     else {

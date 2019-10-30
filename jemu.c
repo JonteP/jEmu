@@ -30,7 +30,7 @@ int main() {
 	init_sdl_video();
 	frameTime = 16666667;
 	init_time(frameTime);
-	currentMachine = &fds;
+	currentMachine = &nes_ntsc;
 	run_console();
 	close_sdl();
 }
