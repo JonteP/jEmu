@@ -1403,7 +1403,7 @@ void vrc3_irq() {
 static uint8_t vrc5_irqControl;
 static uint16_t vrc5_irqLatch;
 static uint16_t vrc5_irqCounter;
-static uint8_t qtRam[0x800];
+static uint8_t qtRam[0x800] = {0};
 static uint8_t vrc5_tilePosition;
 static uint8_t vrc5_tileAttribute;
 static uint8_t vrc5_column;
@@ -1420,29 +1420,32 @@ uint8_t* vrc5_ppu_read_nt(uint16_t);
 
 void mapper_vrc5(uint16_t address, uint8_t value) {
     switch(address & 0xff00) {
-    case 0xd000:
+    case 0xd000: //WRAM Bank Select, 0x6000
         cpuMemory[0x6]->memory = ((value & 0x08) ? wram : bwram) + ((value & 0x01) << 12);
         break;
-    case 0xd100:
+    case 0xd100: //WRAM Bank Select, 0x7000
         cpuMemory[0x7]->memory = ((value & 0x08) ? wram : bwram) + ((value & 0x01) << 12);
         break;
-    case 0xd200: //PRG-ROM Bank Select, 0x8000 (write)
-        prgBank[0] = (value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1);
+    case 0xd200: //PRG-ROM Bank Select, 0x8000
+        //printf("PRG bank %02x @ 0x8000\n",value);
+        prgBank[0] = ((value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1));
         prgBank[1] = prgBank[0] + 1;
-        cpuMemory[0x8]->memory = prg + ((prgBank[0] & (cart.pSlots - 1)) << 12);
-        cpuMemory[0x9]->memory = prg + ((prgBank[1] & (cart.pSlots - 1)) << 12);
+        cpuMemory[0x8]->memory = prg + (prgBank[0] << 12);
+        cpuMemory[0x9]->memory = prg + (prgBank[1] << 12);
         break;
-    case 0xd300:
-        prgBank[2] = (value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1);
-        prgBank[3] = prgBank[0] + 1;
-        cpuMemory[0xa]->memory = prg + ((prgBank[2] & (cart.pSlots - 1)) << 12);
-        cpuMemory[0xb]->memory = prg + ((prgBank[3] & (cart.pSlots - 1)) << 12);
+    case 0xd300: //PRG-ROM Bank Select, 0xa000
+        //printf("PRG bank %02x @ 0xa000\n",value);
+        prgBank[2] = ((value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1));
+        prgBank[3] = prgBank[2] + 1;
+        cpuMemory[0xa]->memory = prg + (prgBank[2] << 12);
+        cpuMemory[0xb]->memory = prg + (prgBank[3] << 12);
         break;
-    case 0xd400:
-        prgBank[4] = (value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1);
-        prgBank[5] = prgBank[0] + 1;
-        cpuMemory[0xc]->memory = prg + ((prgBank[4] & (cart.pSlots - 1)) << 12);
-        cpuMemory[0xd]->memory = prg + ((prgBank[5] & (cart.pSlots - 1)) << 12);
+    case 0xd400: //PRG-ROM Bank Select, 0xc000
+        //printf("PRG bank %02x @ 0xc000\n",value);
+        prgBank[4] = ((value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1));
+        prgBank[5] = prgBank[4] + 1;
+        cpuMemory[0xc]->memory = prg + (prgBank[4] << 12);
+        cpuMemory[0xd]->memory = prg + (prgBank[5] << 12);
         break;
     case 0xd500: //CHR-RAM Bank Select
         chrSlot[0] = chrRam + ((value & 0x01) << 12);
@@ -1471,17 +1474,18 @@ void mapper_vrc5(uint16_t address, uint8_t value) {
         mapperInt = 0;
         break;
     case 0xda00: //Nametable Control
-        cart.mirroring = (value & 2) ? H_MIRROR : V_MIRROR;
+        cart.mirroring = ((value & 0x02) ? H_MIRROR : V_MIRROR);
+        nametable_mirroring(cart.mirroring);
         ntTarget = value & 0x01;
         break;
     case 0xdb00:
         vrc5_tilePosition = value & 0x03;
         vrc5_tileAttribute = value & 0x04;
         break;
-    case 0xdc00: //Character Translation Output, tile (read)
+    case 0xdc00: //Character Translation Output, tile
         vrc5_column = value;
         break;
-    case 0xdd00: //Character Translation Output, bank (read)
+    case 0xdd00: //Character Translation Output, bank
         vrc5_row = value;
         break;
     default:
@@ -1507,43 +1511,46 @@ uint8_t vrc5_read(uint16_t address) {
 
 uint8_t retVal;
 uint8_t* vrc5_ppu_read_chr(uint16_t address) {
-    if(qtVal & 0x40) {
-        if(address & 0x08) {
-            retVal = (qtVal & 0x80) ? 0xFF : 0x00;
-            return &retVal;
+    if(address & 0x1000) { //BG tile fetch
+        if(qtVal & 0x40) { //QTa Kanji CHR ROM
+            if(address & 0x08) {
+                retVal = (qtVal & 0x80) ? 0xff : 0x00;
+                return &retVal;
+            }
+            else
+                return &chrRom[((qtVal & 0x3f) << 12) | (address & 0xfff)];
         }
-
-        else
-            return &chrRom[((qtVal & 0x3f) << 12) | (address & ~0x1000)];
+        else  //BG tile from external CHR RAM
+            return &chrRam[((qtVal & 0x01) << 12) | (address & 0xfff)];
     }
-    else
+    else //Sprite tile from external CHR RAM
         return &chrSlot[(address >> 10)][address & 0x3ff];
 }
 
 uint8_t* vrc5_ppu_read_nt(uint16_t address) {
-    if((address & 0x3ff) < 0x3c0) //exclude writes to attribute table
-        qtVal = qtRam[(cart.mirroring ? ((address & 0x800) >> 1) : (address & 0x400)) | (address & 0x3ff)];
+    if((address & 0x3ff) < 0x3c0) {//exclude reads from attribute table
+        qtVal = qtRam[(cart.mirroring ? (address & 0x400) : ((address & 0x800) >> 1)) | (address & 0x3ff)];
+    }
     return &nameSlot[(address >> 10) & 3][address & 0x3ff];
 }
 
 void vrc5_ppu_write_nt(uint16_t address, uint8_t value) {
-    if(ntTarget)
-        qtRam[(cart.mirroring ? ((address & 0x800) >> 1) : (address & 0x400)) | (address & 0x3ff)] = value;
+    if(ntTarget) {
+        qtRam[(cart.mirroring ? (address & 0x400) : ((address & 0x800) >> 1)) | (address & 0x3ff)] = value;
+    }
     else
         nameSlot[(address >> 10) & 3][address & 0x3ff] = value;
 }
 
-#define QT_ROWS 16
-#define QT_COLS 32
 static const uint8_t conv_tbl[4][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x40, 0x10, 0x28, 0x00, 0x18, 0x30 },
     { 0x00, 0x00, 0x48, 0x18, 0x30, 0x08, 0x20, 0x38 },
-    { 0x00, 0x00, 0x80, 0x20, 0x38, 0x10, 0x28, 0xB0 }
+    { 0x00, 0x00, 0x80, 0x20, 0x38, 0x10, 0x28, 0xb0 }
 };
 
 void kanji_decoder() {
-    uint8_t tabl = conv_tbl[(vrc5_column >> 5) & 3][(vrc5_row & 0x7F) >> 4];
+    uint8_t tabl = conv_tbl[(vrc5_column >> 5) & 3][(vrc5_row & 0x7f) >> 4];
     qtramByte = 0x40 | (tabl & 0x3f) | ((vrc5_row >> 1) & 7) | (vrc5_tileAttribute << 5);
     ciramByte = ((vrc5_row & 0x01) << 7) | ((vrc5_column & 0x1f) << 2) | vrc5_tilePosition;
     if(tabl & 0x40)

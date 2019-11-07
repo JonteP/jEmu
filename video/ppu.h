@@ -23,10 +23,12 @@ uint8_t palette[0x20];
 uint8_t *chrSlot[0x8];  //maps VRAM 0x0000-0x1fff in 0x400B banks
 uint8_t *nameSlot[0x4]; //maps the nametable to CIRAM and/or cartridge RAM according to mirroring mode
 
-uint8_t ppuOamAddress;
+uint8_t ppuOamAddress, isbg;
 uint32_t nmiFlipFlop;
 uint32_t frame;
 int32_t ppucc;
+
+extern int16_t ppudot, ppu_vCounter;
 
 extern struct ppuDisplayMode ntscMode;
 extern struct ppuDisplayMode palMode;

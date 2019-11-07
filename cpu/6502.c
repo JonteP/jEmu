@@ -872,7 +872,6 @@ void interrupt_handle(interrupt_t x) {
 			cpuPC = (_6502_cpuread(nmi + 1) << 8) + _6502_cpuread(nmi);			//cycle 6 (PCL)
 																	            //cycle 7 (PCH)
 		bitset(&cpuP, 1, 2); /* set I flag */
-
 }
 
 //TODO: what are proper startup/reset values?

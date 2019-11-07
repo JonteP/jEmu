@@ -115,7 +115,7 @@ int nesemu() {
     player1_buttonSelect = &nes_p1select;
 
     strcpy(currentMachine->cartFile,
-            "/home/jonas/git/roms/nes/vrc5/Idemitsu - Space College - Kikenbutsu no Yasashii Butsuri to Kagaku (CAI Gakusyuu System, QTai Hardware) (J)[U][!].nes");
+            "/home/jonas/git/roms/nes/vrc5/NHK Gakuen - Space School - Sansu 5 Nen (Jou) (CAI Gakusyuu System, QTai Hardware) (J)[U][!].nes");
 
     nes_reset_emulation();
 
@@ -295,7 +295,6 @@ uint8_t nes_6502_cpuread(uint16_t address) {
         return read_fds_register(address);
     uint8_t mapperVal = read_mapper_register(address);
     if(mapperRead) {
-        printf("read mapper address: %04x\n",address);
         mapperRead = 0;
         return mapperVal;
     }

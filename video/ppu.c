@@ -20,8 +20,8 @@
 struct ppuDisplayMode ntscMode = { 256, 240, NTSC_SCANLINES };
 struct ppuDisplayMode  palMode = { 256, 240,  PAL_SCANLINES };
 
-static int16_t ppudot;
-static int16_t ppu_vCounter;
+ int16_t ppudot;
+ int16_t ppu_vCounter;
 static uint8_t vblank_period;
 static uint8_t nmiSuppressed;
 static uint8_t secOam[0x20];
