@@ -26,6 +26,7 @@ static uint8_t vblank_period;
 static uint8_t nmiSuppressed;
 static uint8_t secOam[0x20];
 static uint32_t *ppuScreenBuffer = NULL;
+static uint8_t spriteBuffer[256], zeroBuffer[256], priorityBuffer[256], isSpriteZero = 0xff;
 
 //PPU internal registers
 static uint8_t  ppuW;
@@ -92,7 +93,6 @@ static inline void horizontal_t_to_v();
 static inline void vertical_t_to_v();
 static inline void ppu_render();
 static inline void reload_tile_shifter();
-static inline void toggle_a12(uint16_t);
 static inline void ppuwrite(uint16_t, uint8_t);
 static inline uint8_t * ppuread(uint16_t);
 static inline void none(), seZ(), seRD(), seWD(), seRR(), seWW(), tfNT(), tfAT(), tfLT(), tfHT(), sfNT(), sfAT(), sfLT(), sfHT(), dfNT(), hINC(), vINC();
@@ -185,19 +185,18 @@ void run_ppu (uint16_t ntimes) {
 
 //VBLANK ONSET
         if (ppu_vCounter == 241 && ppudot == 1) {
-            ppuStatusNmi = 1; /* set vblank */
+            ppuStatusNmi = 1;
             vblank_period = 1;
         }
 //PRERENDER SCANLINE
         else if (ppu_vCounter == (ppuCurrentMode->scanlines - 1)) {
             if (ppuMask & 0x18)	{
                 (*fetchGraphics[ppudot])();
-                (*spriteEvaluation[ppudot])();
             }
             ppu_render();
             if (ppudot == 1) {
                 if (ppuStatusNmi) {
-                    ppuStatusNmi = 0; /* clear vblank */
+                    ppuStatusNmi = 0;
                     ppuStatusNmiDelay = 1;
                 }
                 nmiSuppressed = 0;
@@ -206,17 +205,19 @@ void run_ppu (uint16_t ntimes) {
                 vblank_period = 0;
                 ppuStatusOverflow = 0;
             }
-            if (ppudot ==2)
+            if (ppudot == 2)
                 ppuStatusNmiDelay = 0;
             else if (ppudot >= 257 && ppudot <= 320) {
 //(reset OAM)
-                ppuOamAddress = 0; /* only if rendering active? */
-                if (ppudot == 257)
+                ppuOamAddress = 0; //TODO: only if rendering active?
+                if (ppudot == 257) {
                     horizontal_t_to_v();
+                }
                 else if (ppudot >= 280 && ppudot <= 304)
                     vertical_t_to_v();
             } else if (ppudot == 339) {
-                if (frame%2 && (ppuMask & 0x18) && ppuCurrentMode->scanlines == NTSC_SCANLINES)
+                memset(zeroBuffer,0,256);//does not get cleared after last prefetch before vblank....
+                if (frame % 2 && (ppuMask & 0x18) && ppuCurrentMode->scanlines == NTSC_SCANLINES)
                     ppudot++;
             }
 //RESET CLOCK COUNTER HERE...
@@ -242,7 +243,6 @@ void run_ppu (uint16_t ntimes) {
 static uint8_t ntData, attData, tileLow, tileHigh, spriteLow, spriteHigh;
 static uint16_t tileShifterLow, tileShifterHigh, attShifterHigh, attShifterLow;
 static uint8_t oamOverflow1, oamOverflow2, nSprite1, nSprite2, nData, data, nData2;
-static uint8_t spriteBuffer[256], zeroBuffer[256], priorityBuffer[256], isSpriteZero = 0xff;
 static uint8_t foundSprites = 0;
 
 void none () {}
@@ -274,7 +274,7 @@ void seRR () {
         nSprite1 = 0;
         ppuOamAddress = 0;
     }
-    data = oam[(nSprite1 << 2) + nData]; /* read y coordinate */
+    data = oam[(nSprite1 << 2) + nData]; //read y coordinate
     if (!nData && !(data <= ppu_vCounter && ppu_vCounter <= (data + 7 + ( (ppuController >> 2) & 0x08)))) { /* not within range */
         nSprite1++;
         ppuOamAddress += 4;
@@ -313,26 +313,25 @@ void seWW () {
     }
 }
 
-void tfNT() {
+void tfNT() { //BG name table fetch
     uint16_t a = (0x2000 | (ppuV & 0xfff));
     ntData = *ppuread(a);
 }
 
-void tfAT() {
+void tfAT() { //BG attribute table fetch
     uint16_t a = (0x23c0 | (ppuV & 0xc00) | ((ppuV >> 4) & 0x38) | ((ppuV >> 2) & 0x07));
     uint8_t bgData = *ppuread(a);
     attData = ((bgData >> ((((ppuV >> 1) & 1) | ((ppuV >> 5) & 2)) << 1)) & 3);
 }
 
-void tfLT() {
+void tfLT() { //BG pattern table fetch, low byte
     uint16_t a = ((ntData << 4) + ((ppuController & 0x10) << 8) + ((ppuV >> 12) & 7));
     tileLow = *ppuread(a);
 }
 
-void tfHT() {
+void tfHT() { //BG pattern table fetch, high byte
     uint16_t a = ((ntData << 4) + ((ppuController & 0x10) << 8) + ((ppuV >> 12) & 7) + 8);
     tileHigh = *ppuread(a);
-    toggle_a12(a);
 }
 
 void sfNT() {
@@ -373,8 +372,7 @@ void sfHT() {
     for(int pcol = 0; pcol < 8; pcol++) {
         uint8_t spritePixel = (7 - pcol - flipX * (7 - (pcol << 1)));
         uint8_t pixelData = (((spriteLow >> spritePixel) & 0x01) + (((spriteHigh >> spritePixel) & 0x01) << 1));
-        toggle_a12(patternOffset + spriteRow);
-        if(pixelData && (spriteBuffer[sprite[3] + pcol])==0xff && !(sprite[3] == 0xff)) {/* TODO: this PPU access probably should not be here, screws up mmc3 irq? */
+        if(pixelData && (spriteBuffer[sprite[3] + pcol]) == 0xff && !(sprite[3] == 0xff)) {/* TODO: this PPU access probably should not be here, screws up mmc3 irq? */
             spriteBuffer[sprite[3] + pcol] = *ppuread(0x3f10 + (nPalette << 2) + pixelData);
             if (isSpriteZero == cSprite) {
                 zeroBuffer[sprite[3] + pcol] = 1;
@@ -390,10 +388,10 @@ void hINC() {
     if (ppuMask & 0x18)	{
         if ((ppuV & 0x1f) == 0x1f) {
             ppuV &= ~0x1f;
-            ppuV ^= 0x0400; /* switch nametable horizontally */
+            ppuV ^= 0x0400; //switch nametable horizontally
         }
         else
-            ppuV++; /* next tile */
+            ppuV++; //next tile
     }
 }
 
@@ -431,21 +429,21 @@ void ppu_render() {
  * The shifters shift at h=2, the palette address changes at h=3 for the palette lookup, and the pixel is drawn during h=4 (as seen by vid_ changing).
  * It also looks like the shift registers are actually reloaded at h=9,17,25,... instead of at h=8,16,24,
  */
-    if (ppudot >= 1 && ppudot <= 257) { /* tile data fetch */
-        if (ppudot <=256) {
+    if (ppudot >= 1 && ppudot <= 257) { //tile data fetch
+        if (ppudot <= 256) {
             if (ppudot%8 == 2)
                 reload_tile_shifter();
         }
-        if (ppudot >=2) {
+        if (ppudot >= 2) {
             uint8_t pValue;
             int16_t cDot = ppudot - 2;
             pValue = ((attShifterHigh >> (12 - ppuX)) & 8) | ((attShifterLow >> (13 - ppuX)) & 4) | ((tileShifterHigh >> (14 - ppuX)) & 2) | ((tileShifterLow >> (15 - ppuX)) & 1);
             uint8_t bgColor = (!(ppuMask & 0x18) && (ppuV & 0x3f00) == 0x3f00) ? *ppuread(ppuV & 0x3fff) : *ppuread(0x3f00);
-            uint8_t isSprite = (spriteBuffer[cDot]!=0xff && (ppuMask & 0x10) && ((cDot > 7) || (ppuMask & 0x04)));
+            uint8_t isSprite = ((spriteBuffer[cDot] != 0xff) && (ppuMask & 0x10) && ((cDot > 7) || (ppuMask & 0x04)));
             uint8_t isBg = ((pValue & 0x03) && (ppuMask & 0x08) && ((cDot > 7) || (ppuMask & 0x02)));
             if (ppu_vCounter < 240) {
                 if (isSprite && isBg) {
-                    if (!ppuStatusSpriteZero && zeroBuffer[cDot] && cDot<255) {
+                    if (!ppuStatusSpriteZero && zeroBuffer[cDot] && cDot < 255) {
                         ppuStatusSpriteZero = 1;
                         color = 0x10;
                     }
@@ -471,7 +469,7 @@ void ppu_render() {
             }
         }
     }
-    else if (ppudot >= 321 && ppudot <= 336) { /* prefetch tiles */
+    else if (ppudot >= 321 && ppudot <= 336) { //prefetch tiles
         if (ppudot%8 == 1)
             reload_tile_shifter();
         tileShifterHigh <<= 1;
@@ -483,13 +481,13 @@ void ppu_render() {
 
 void horizontal_t_to_v() {
     if (ppuMask & 0x18) {
-        ppuV = (ppuV & 0xfbe0) | (ppuT & 0x41f); /* reset x scroll */
+        ppuV = (ppuV & 0xfbe0) | (ppuT & 0x41f); //reset x scroll
     }
 }
 
 void vertical_t_to_v() {
     if (ppuMask & 0x18)	{
-        ppuV = (ppuV & 0x841f) | (ppuT & 0x7be0); /* reset Y scroll */
+        ppuV = (ppuV & 0x841f) | (ppuT & 0x7be0); //reset Y scroll
     }
 }
 
@@ -498,23 +496,23 @@ uint8_t read_ppu_register(uint16_t addr) {
     unsigned int tmpval8;
     switch (addr & 0x2007) {
     case 0x2002:
-        if (ppucc == 343 || ppucc == 344) {/* suppress if read and set at same time */
+        if (ppucc == 343 || ppucc == 344) {//suppress if read and set at same time
             nmiSuppressed = 1;
             nmiFlipFlop = 0;
         } else if (ppucc == 342) {
             ppuStatusNmi = 0;
         }
-        tmpval8 = ((ppuStatusNmi | ppuStatusNmiDelay)  <<7) | (ppuStatusSpriteZero<<6) | (ppuStatusOverflow<<5) | (ppureg & 0x1f);
+        tmpval8 = ((ppuStatusNmi | ppuStatusNmiDelay) << 7) | (ppuStatusSpriteZero << 6) | (ppuStatusOverflow << 5) | (ppureg & 0x1f);
         ppuStatusNmi = 0;
         ppuStatusNmiDelay = 0;
         ppuW = 0;
         break;
     case 0x2004:
-/* TODO: Correct behavior when accessed during rendering */
+//TODO: Correct behavior when accessed during rendering
         if ((ppuMask & 0x18) && !vblank_period) {
             if (ppudot < 65)
                 tmpval8 = 0xff;
-            else if (ppudot <257)
+            else if (ppudot < 257)
                 tmpval8 = secOam[(nSprite2 << 2) + nData2];
             else if (ppudot < 321) {
                 cSprite = ((ppudot >> 3) & 0x07);
@@ -530,13 +528,12 @@ uint8_t read_ppu_register(uint16_t addr) {
             tmpval8 = vbuff;
             vbuff = *ppuread(ppuV);
         }
-/* TODO: buffer update when reading palette */
+//TODO: buffer update when reading palette
         else if ((ppuV) >= 0x3f00) {
             tmpval8 = *ppuread(ppuV) & ((ppuMask & 0x01) ? 0x30 : 0xff);
             vbuff = tmpval8;
         }
         ppuV += (ppuController & 0x04) ? 32 : 1;
-        toggle_a12(ppuV);
         break;
     }
     return tmpval8;
@@ -548,7 +545,7 @@ void write_ppu_register(uint16_t addr, uint8_t tmpval8) {
     case 0x2000:
         ppuController = tmpval8;
         ppuT &= 0xf3ff;
-        ppuT |= ((ppuController & 3)<<10);
+        ppuT |= ((ppuController & 3) << 10);
         if (!(ppuController & 0x80)) {
             nmiFlipFlop = 0;
             nmiSuppressed = 0;
@@ -567,7 +564,7 @@ void write_ppu_register(uint16_t addr, uint8_t tmpval8) {
         break;
     case 0x2004:
         ppureg = tmpval8;
-/* TODO: writing during rendering */
+//TODO: writing during rendering
         if (vblank_period || !(ppuController & 0x18)) {
             oam[ppuOamAddress++] = tmpval8;
         }
@@ -575,13 +572,13 @@ void write_ppu_register(uint16_t addr, uint8_t tmpval8) {
     case 0x2005:
         if (ppuW == 0) {
             ppuT &= 0xffe0;
-            ppuT |= ((tmpval8 & 0xf8)>>3); /* coarse X scroll */
-            ppuX = (tmpval8 & 0x07); /* fine X scroll  */
+            ppuT |= ((tmpval8 & 0xf8) >> 3); //coarse X scroll
+            ppuX = (tmpval8 & 0x07); //fine X scroll
             ppuW = 1;
         } else if (ppuW == 1) {
             ppuT &= 0x8c1f;
-            ppuT |= ((tmpval8 & 0xf8)<<2); /* coarse Y scroll */
-            ppuT |= ((tmpval8 & 0x07)<<12); /* fine Y scroll */
+            ppuT |= ((tmpval8 & 0xf8) << 2); //coarse Y scroll
+            ppuT |= ((tmpval8 & 0x07) << 12); //fine Y scroll
             ppuW = 0;
         }
         break;
@@ -594,20 +591,15 @@ void write_ppu_register(uint16_t addr, uint8_t tmpval8) {
             ppuT &= 0xff00;
             ppuT |= tmpval8;
             ppuV = ppuT;
-            toggle_a12(ppuV);
+            (void)*ppuread(ppuV);//TODO: hackish, for mmc3 clocking
             ppuW = 0;
         }
         break;
     case 0x2007:
         if (vblank_period || !(ppuMask & 0x18)) {
             ppuData = tmpval8;
-            if ((ppuV & 0x3fff) >= 0x3f00)
-                ppuwrite((ppuV & 0x3fff), (ppuData & 0x3f));
-            else {
-                ppuwrite((ppuV & 0x3fff), ppuData);
-            }
+            ppuwrite((ppuV & 0x3fff), ppuData);
             ppuV += (ppuController & 0x04) ? 32 : 1;
-            toggle_a12(ppuV);
             break;
         } else {
             vINC();
@@ -617,12 +609,13 @@ void write_ppu_register(uint16_t addr, uint8_t tmpval8) {
 }
 
 uint8_t * ppuread(uint16_t address) {
+    mmc3_ppu_read_chr(address);
     if (address < 0x2000) { //pattern tables
         return ppu_read_chr(address);
     } else if (address < 0x3f00) { //nametables
         return ppu_read_nt(address);
     }
-    else if (address >= 0x3f00) { /* palette RAM */
+    else if (address >= 0x3f00) { //palette RAM
         if (address == 0x3f10)
             address = 0x3f00;
         else if (address == 0x3f14)
@@ -637,13 +630,13 @@ uint8_t * ppuread(uint16_t address) {
 }
 
 void ppuwrite(uint16_t address, uint8_t value) {
-    if (address < 0x2000) { /* pattern tables */
+    if (address < 0x2000) { //pattern tables
         if (chrSource[(address >> 10)] == CHR_RAM)
             chrSlot[(address >> 10)][address & 0x3ff] = value;
-    } else if (address >= 0x2000 && address < 0x3f00) { /* nametables */
+    } else if (address >= 0x2000 && address < 0x3f00) { //nametables
         ppu_write_nt(address,value);
     }
-    else if (address >= 0x3f00) { /* palette RAM */
+    else if (address >= 0x3f00) { //palette RAM
         if (address == 0x3f10)
             address = 0x3f00;
         else if (address == 0x3f14)
@@ -652,7 +645,7 @@ void ppuwrite(uint16_t address, uint8_t value) {
             address = 0x3f08;
         else if (address == 0x3f1c)
             address = 0x3f0c;
-        palette[(address & 0x1f)] = value;
+        palette[(address & 0x1f)] = (value & 0x3f);
     }
 }
 
@@ -661,17 +654,4 @@ void check_nmi() {
         nmiPulled = 1;
         nmiFlipFlop = ppucc;
     }
-}
-
-uint16_t lastAddress = 0x0000;
-void toggle_a12(uint16_t address) {
-    if ((address & 0x1000) && ((address ^ lastAddress) & 0x1000) && (!strcmp(cart.slot,"txrom") || !strcmp(cart.slot,"tqrom") || !strcmp(cart.slot,"txsrom") || !strcmp(cart.slot,"tc0190fmcp"))) {
-        irq_ppu_clocked();
-    }
-    else if (!(address & 0x1000) && ((address ^ lastAddress) & 0x1000) && !strcmp(cart.slot,"txrom")) {
-    }
-/* during sprite fetches, the PPU rapidly alternates between $1xxx and $2xxx, and the MMC3 does not see A13 -
- * as such, the PPU will send 8 rising edges on A12 during the sprite fetch portion of the scanline
- * (with 8 pixel clocks, or 2.67 CPU cycles between them */
-    lastAddress = address;
 }

@@ -25,7 +25,7 @@ static uint8_t header[0x10];
 xmlDoc *nesXml;
 xmlNode *root;
 xmlChar *sphash = NULL, *schash = NULL;
-uint8_t hashMatch = 0;
+uint8_t hashMatch;
 
 //common cartridge related
 gameFeatures cart;
@@ -35,7 +35,7 @@ static unsigned char phash[SHA_DIGEST_LENGTH];
 uint8_t *prg = NULL;
 uint8_t *bwram = NULL;
 uint8_t *wram = NULL;
-uint8_t wramEnable = 0;
+uint8_t wramEnable;
 uint8_t *wramSource = NULL; //TODO: should be made obsolete
 uint8_t *chrRom = NULL;
 uint8_t *chrRam = NULL;
@@ -66,6 +66,8 @@ void nes_load_rom(char *rom) {
     cart.chrSize = 0;
     isInes = 0;
     isUnif = 0;
+    hashMatch = 0;
+    wramEnable = 0;
     if ((romFile = fopen(rom, "r")) == NULL) {
         printf("Error: No such file\n");
         exit(EXIT_FAILURE);
@@ -201,7 +203,7 @@ void nes_load_rom(char *rom) {
         wramSource = wram;
         wramEnable = 1;
     }
-    else
+    if(!(cart.bwramSize) && !(cart.wramSize))
         wramEnable = 0;
     printf("PCB: %s (%s)\n",cart.pcb,cart.slot);
     printf("PRG size: %li bytes\n",cart.prgSize);
@@ -315,7 +317,9 @@ void extract_xml_data(xmlNode * s_node) {
             else if (!xmlStrcmp(nam,(xmlChar *)"vrc6-pin10"))
                 cart.vrc6Prg0 = strtol((char *)val+5,NULL,10);
             else if (!xmlStrcmp(nam,(xmlChar *)"mmc1_type"))
-                strcpy(cart.mmc1_type,(char *)val);
+                strcpy(cart.subtype,(char *)val);
+            else if (!xmlStrcmp(nam,(xmlChar *)"mmc3_type"))
+                strcpy(cart.subtype,(char *)val);
             else if (!xmlStrcmp(nam,(xmlChar *)"mirroring")) {
                 if (!xmlStrcmp(val,(xmlChar *)"horizontal"))
                     cart.mirroring = 0;

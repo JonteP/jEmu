@@ -115,7 +115,7 @@ int nesemu() {
     player1_buttonSelect = &nes_p1select;
 
     strcpy(currentMachine->cartFile,
-            "/home/jonas/git/roms/nes/vrc5/NHK Gakuen - Space School - Sansu 5 Nen (Jou) (CAI Gakusyuu System, QTai Hardware) (J)[U][!].nes");
+            "/home/jonas/git/roms/nes/mmc3/ninja2.nes");
 
     nes_reset_emulation();
 
@@ -317,18 +317,12 @@ void nes_6502_cpuwrite(uint16_t address, uint8_t value) {
         write_cpu_register(address, value);
     else if (address >= 0x4020 && address < 0x4030 && currentMachine->bios != NULL)
         write_fds_register(address, value);
-    else if (address >= 0x4020 && address < 0x6000)
-        write_mapper_register4(address, value);
-    else if (address >= 0x6000 && address < 0x8000) {
-        write_mapper_register6(address, value);
+    else if (address >= 0x4030)
   /*      if (wramEnable && !extendedPrg)
             wramSource[(address & 0x1fff)] = value;
         else if (wramBit) //used by VRC2/4
             wramBitVal = (value & 0x01); */
-    } else if (address >= 0x8000) {
-        write_mapper_register8(address, value);
-    }
-
+        write_mapper_register(address, value);
 }
 
 //TODO: is this machine implementation specific?
@@ -440,15 +434,15 @@ void write_cpu_register(uint16_t address, uint8_t value) {
         dmcOutput = (value & 0x7f);
         break;
     case 0x4012: /* DMC sample address */
-        dmcAddress = (0xc000 + (64 * value));
+        dmcAddress = (0xc000 + (value << 6));
         dmcCurAdd = dmcAddress;
         break;
     case 0x4013: /* DMC sample length */
-        dmcLength = ((16 * value) + 1);
+        dmcLength = ((value << 4) + 1);
         break;
     case 0x4014:
-        source = ((value << 8) & 0xff00);
-        if (_6502_cycleCounter % 2)
+        source = (value << 8);
+        if (_6502_M2 % 2)
             _6502_addcycles(2);
         else
             _6502_addcycles(1);
@@ -499,7 +493,7 @@ void nes_6502_addcycles(uint8_t val) {
     ppu_wait += (val * ppuClockRatio);
     apu_wait += val;
     fds_wait += val;
-    _6502_cycleCounter += val;
+    _6502_M2 += val;
 }
 
 void nes_6502_synchronize(int x) {

@@ -33,8 +33,7 @@ typedef struct gameFeatures_ {
 	long vrc24Chr;
 	long vrc6Prg1;
 	long vrc6Prg0;
-	char mmc1_type[20];
-	char mmc3_type[20];
+	char subtype[20];
     uint8_t battery;
 } gameFeatures;
 

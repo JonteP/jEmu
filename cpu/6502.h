@@ -17,7 +17,7 @@ typedef enum {
 uint8_t  dummywrite; //used for mmc1; TODO: cleaner solution
 uint8_t  irqPulled;
 uint8_t  nmiPulled;
-uint32_t _6502_cycleCounter;
+uint32_t _6502_M2;
 
 //function pointers to be hooked up by emulated machine
 void    (*_6502_synchronize)(int);

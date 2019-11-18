@@ -8,7 +8,6 @@
  *           multicarts
  * -Bandai anything (#16, #70, #152, #153, #157, #159, #188...)
  * -Konami VRC4 derivatives (#27...)
- *         VRC5
  *         VRC7
  * -Taito X1-005
  *        X1-017
@@ -205,7 +204,7 @@ void mapper_mmc1(uint16_t address, uint8_t value) {
                         break;
                     case 3: //PRG ROM bank
                         mmc1Reg3 = mmc1Buffer;
-                        if (strcmp(cart.mmc1_type,"MMC1A"))
+                        if (strcmp(cart.subtype,"MMC1A"))
                             wramEnable = !((mmc1Reg3 >> 4) & 1);
                         mmc1_prg_bank_switch();
                         break;
@@ -284,158 +283,6 @@ void mmc1_chr_bank_switch() {
     }
 }
 
-/////////////////////////////////////
-//              MMC 3              //
-//              TxROM              //
-/////////////////////////////////////
-
-/* TODO:
- * Support for mapper 47
- *-Clean IRQ implementation
- * remaining IRQ issues:
- * -Ninja ryuukenden 2 - cut scenes
- * -Rockman3 - possible one-line glitch in weapons screen
- * -Rockman5 - slight glitch in gyromans elevators
- */
-
-static uint8_t mmc3BankSelect = 0, mmc3Reg[0x08] = { 0 }, mmc3IrqEnable = 0,
-        mmc3PramProtect, mmc3IrqLatch = 0, mmc3IrqReload = 0, mmc3IrqCounter = 0;
-static chrtype_t mmc3ChrSource[0x8];
-static inline void mapper_mmc3(uint16_t, uint8_t), mmc3_prg_bank_switch(), mmc3_chr_bank_switch();
-
-void mapper_mmc3 (uint16_t address, uint8_t value) {
-    switch ((address >> 13) & 0x03) {
-    case 0:
-        if (!(address % 2)) { //Bank select (0x8000)
-            mmc3BankSelect = value;
-            mmc3_chr_bank_switch();
-            mmc3_prg_bank_switch();
-        } else if (address % 2) { //Bank data (0x8001)
-            int bank = (mmc3BankSelect & 0x07);
-            mmc3Reg[bank] = value;
-            if (bank < 6) {
-                if (!strcmp(cart.slot,"tqrom") && (value & 0x40)) {
-                    mmc3ChrSource[bank] = CHR_RAM;
-                }
-                else if (!strcmp(cart.slot,"tqrom") && !(value & 0x40)) {
-                    mmc3ChrSource[bank] = CHR_ROM;
-                }
-                mmc3_chr_bank_switch();
-            } else
-                mmc3_prg_bank_switch();
-        }
-        break;
-    case 1:
-        if (!(address % 2) && strcmp(cart.slot,"txsrom")) { //Mirroring (0xA000)
-            cart.mirroring = 1 - (value & 0x01);
-            nametable_mirroring(cart.mirroring);
-        } else if (address % 2) { //PRG RAM protect (0xA001)
-            mmc3PramProtect = value;
-        }
-        break;
-    case 2:
-        if (!(address % 2)) { //IRQ latch (0xC000)
-            mmc3IrqLatch = value;
-        } else if (address % 2) { //IRQ reload (0xC001)
-            mmc3IrqReload = 1;
-            mmc3IrqCounter = 0;
-        }
-        break;
-    case 3:
-        if (!(address % 2)) { //IRQ disable and acknowledge (0xe000)
-            mmc3IrqEnable = 0;
-            mapperInt = 0;
-        } else if (address % 2) { //IRQ enable (0xE001)
-            mmc3IrqEnable = 1;
-        }
-        break;
-    }
-}
-
-void mmc3_prg_bank_switch() {
-    if (mmc3BankSelect & 0x40) {
-        prgBank[0] = cart.pSlots - 4;
-        prgBank[1] = cart.pSlots - 3;
-        prgBank[4] = (mmc3Reg[6] << 1);
-        prgBank[5] = prgBank[4] + 1;
-    } else if (!(mmc3BankSelect & 0x40)) {
-        prgBank[0] = (mmc3Reg[6] << 1);
-        prgBank[1] = prgBank[0] + 1;
-        prgBank[4] = cart.pSlots - 4;
-        prgBank[5] = cart.pSlots - 3;
-    }
-    prgBank[2] = (mmc3Reg[7] << 1);
-    prgBank[3] = prgBank[2] + 1;
-    prg_bank_switch();
-}
-
-void mmc3_chr_bank_switch() {
-    if (mmc3BankSelect & 0x80) {
-        if (!strcmp(cart.slot,"txsrom")) {
-            nameSlot[0] = (mmc3Reg[2] & 0x80) ? ciRam : (ciRam + 0x400);
-            nameSlot[1] = (mmc3Reg[3] & 0x80) ? ciRam : (ciRam + 0x400);
-            nameSlot[2] = (mmc3Reg[4] & 0x80) ? ciRam : (ciRam + 0x400);
-            nameSlot[3] = (mmc3Reg[5] & 0x80) ? ciRam : (ciRam + 0x400);
-        }
-        chrBank[0] = mmc3Reg[2];
-        chrBank[1] = mmc3Reg[3];
-        chrBank[2] = mmc3Reg[4];
-        chrBank[3] = mmc3Reg[5];
-        chrBank[4] = (mmc3Reg[0] & 0xfe);
-        chrBank[5] = (mmc3Reg[0] | 0x01);
-        chrBank[6] = (mmc3Reg[1] & 0xfe);
-        chrBank[7] = (mmc3Reg[1] | 0x01);
-        chrSource[0] = mmc3ChrSource[2];
-        chrSource[1] = mmc3ChrSource[3];
-        chrSource[2] = mmc3ChrSource[4];
-        chrSource[3] = mmc3ChrSource[5];
-        chrSource[4] = mmc3ChrSource[0];
-        chrSource[5] = mmc3ChrSource[0];
-        chrSource[6] = mmc3ChrSource[1];
-        chrSource[7] = mmc3ChrSource[1];
-    }
-    else if (!(mmc3BankSelect & 0x80)) {
-        if (!strcmp(cart.slot,"txsrom")) {
-            nameSlot[0] = (mmc3Reg[0] & 0x80) ? ciRam : (ciRam + 0x400);
-            nameSlot[1] = (mmc3Reg[0] & 0x80) ? ciRam : (ciRam + 0x400);
-            nameSlot[2] = (mmc3Reg[1] & 0x80) ? ciRam : (ciRam + 0x400);
-            nameSlot[3] = (mmc3Reg[1] & 0x80) ? ciRam : (ciRam + 0x400);
-        }
-        chrBank[0] = (mmc3Reg[0] & 0xfe);
-        chrBank[1] = (mmc3Reg[0] | 0x01);
-        chrBank[2] = (mmc3Reg[1] & 0xfe);
-        chrBank[3] = (mmc3Reg[1] | 0x01);
-        chrBank[4] = mmc3Reg[2];
-        chrBank[5] = mmc3Reg[3];
-        chrBank[6] = mmc3Reg[4];
-        chrBank[7] = mmc3Reg[5];
-        chrSource[0] = mmc3ChrSource[0];
-        chrSource[1] = mmc3ChrSource[0];
-        chrSource[2] = mmc3ChrSource[1];
-        chrSource[3] = mmc3ChrSource[1];
-        chrSource[4] = mmc3ChrSource[2];
-        chrSource[5] = mmc3ChrSource[3];
-        chrSource[6] = mmc3ChrSource[4];
-        chrSource[7] = mmc3ChrSource[5];
-    }
-    chr_bank_switch();
-}
-
-void mmc3_irq() {
-    if (mmc3IrqReload || !mmc3IrqCounter) {
-        mmc3IrqReload = 0;
-        mmc3IrqCounter = mmc3IrqLatch;
-        if (mmc3IrqEnable && !mmc3IrqCounter) {
-            mapperInt = 1;
-        }
-    }
-    else if (mmc3IrqCounter > 0) {
-        mmc3IrqCounter--;
-        if (mmc3IrqEnable && !mmc3IrqCounter) {
-            mapperInt = 1;
-        }
-    }
-}
 
 /*-------------------------American Video Entertainment-------------------------*/
 
@@ -978,6 +825,7 @@ void mapper_jf17(uint16_t address, uint8_t value) {
 static uint8_t ss88006Prg0, ss88006Prg1, ss88006Prg2, ss88006IrqControl;
 static uint16_t ss88006IrqCounter, ss88006IrqReload;
 static inline void mapper_ss88006(uint16_t, uint8_t);
+static void ss88006_irq();
 
 void mapper_ss88006(uint16_t address, uint8_t value) {
     switch (address & 0xf003) {
@@ -1136,6 +984,7 @@ void ss88006_irq() {
 /*-----------------------------------KONAMI------------------------------------*/
 
 static inline void vrc_clock_irq();
+static void vrc_irq(void);
 static uint8_t vrcIrqControl = 0, vrcIrqLatch, vrcIrqCounter, vrcIrqCycles[3] = { 114, 114, 113 }, vrcIrqCc = 0;
 static int16_t vrcIrqPrescale;
 
@@ -1395,180 +1244,6 @@ void vrc3_irq() {
     }
 }
 
-/////////////////////////////////////
-//              VRC 5 +            //
-//            KONAMI-QT            //
-/////////////////////////////////////
-
-static uint8_t vrc5_irqControl;
-static uint16_t vrc5_irqLatch;
-static uint16_t vrc5_irqCounter;
-static uint8_t qtRam[0x800] = {0};
-static uint8_t vrc5_tilePosition;
-static uint8_t vrc5_tileAttribute;
-static uint8_t vrc5_column;
-static uint8_t vrc5_row;
-static uint8_t ciramByte;
-static uint8_t qtramByte;
-static uint8_t qtVal;
-static void mapper_vrc5(uint16_t, uint8_t);
-static void vrc5_irq(void);
-static uint8_t vrc5_read(uint16_t);
-static void kanji_decoder();
-uint8_t* vrc5_ppu_read_chr(uint16_t);
-uint8_t* vrc5_ppu_read_nt(uint16_t);
-
-void mapper_vrc5(uint16_t address, uint8_t value) {
-    switch(address & 0xff00) {
-    case 0xd000: //WRAM Bank Select, 0x6000
-        cpuMemory[0x6]->memory = ((value & 0x08) ? wram : bwram) + ((value & 0x01) << 12);
-        break;
-    case 0xd100: //WRAM Bank Select, 0x7000
-        cpuMemory[0x7]->memory = ((value & 0x08) ? wram : bwram) + ((value & 0x01) << 12);
-        break;
-    case 0xd200: //PRG-ROM Bank Select, 0x8000
-        //printf("PRG bank %02x @ 0x8000\n",value);
-        prgBank[0] = ((value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1));
-        prgBank[1] = prgBank[0] + 1;
-        cpuMemory[0x8]->memory = prg + (prgBank[0] << 12);
-        cpuMemory[0x9]->memory = prg + (prgBank[1] << 12);
-        break;
-    case 0xd300: //PRG-ROM Bank Select, 0xa000
-        //printf("PRG bank %02x @ 0xa000\n",value);
-        prgBank[2] = ((value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1));
-        prgBank[3] = prgBank[2] + 1;
-        cpuMemory[0xa]->memory = prg + (prgBank[2] << 12);
-        cpuMemory[0xb]->memory = prg + (prgBank[3] << 12);
-        break;
-    case 0xd400: //PRG-ROM Bank Select, 0xc000
-        //printf("PRG bank %02x @ 0xc000\n",value);
-        prgBank[4] = ((value & 0x40) ? (((value & 0x3f) + 0x10) << 1) : ((value & 0x0f) << 1));
-        prgBank[5] = prgBank[4] + 1;
-        cpuMemory[0xc]->memory = prg + (prgBank[4] << 12);
-        cpuMemory[0xd]->memory = prg + (prgBank[5] << 12);
-        break;
-    case 0xd500: //CHR-RAM Bank Select
-        chrSlot[0] = chrRam + ((value & 0x01) << 12);
-        chrSlot[1] = chrRam + ((value & 0x01) << 12) + 0x400;
-        chrSlot[2] = chrRam + ((value & 0x01) << 12) + 0x800;
-        chrSlot[3] = chrRam + ((value & 0x01) << 12) + 0xc00;
-        chrSource[0] = CHR_RAM;
-        chrSource[1] = CHR_RAM;
-        chrSource[2] = CHR_RAM;
-        chrSource[3] = CHR_RAM;
-        break;
-    case 0xd600: //IRQ Latch Write, LSB
-        vrc5_irqLatch = (vrc5_irqLatch & 0xff00) | value;
-        break;
-    case 0xd700: //IRQ Latch Write, MSB
-        vrc5_irqLatch = (vrc5_irqLatch & 0x00ff) | (value << 8);
-        break;
-    case 0xd800: //IRQ Acknowledge
-        mapperInt = 0;
-        vrc5_irqControl = (vrc5_irqControl << 1) | (vrc5_irqControl & 0x01);
-        break;
-    case 0xd900: //IRQ Control
-        vrc5_irqControl = value & 0x03;
-        if(vrc5_irqControl & 0x02)
-            vrc5_irqCounter = vrc5_irqLatch;
-        mapperInt = 0;
-        break;
-    case 0xda00: //Nametable Control
-        cart.mirroring = ((value & 0x02) ? H_MIRROR : V_MIRROR);
-        nametable_mirroring(cart.mirroring);
-        ntTarget = value & 0x01;
-        break;
-    case 0xdb00:
-        vrc5_tilePosition = value & 0x03;
-        vrc5_tileAttribute = value & 0x04;
-        break;
-    case 0xdc00: //Character Translation Output, tile
-        vrc5_column = value;
-        break;
-    case 0xdd00: //Character Translation Output, bank
-        vrc5_row = value;
-        break;
-    default:
-        break;
-    }
-}
-
-uint8_t vrc5_read(uint16_t address) {
-    switch(address & 0xff00) {
-    case 0xdc00:
-        kanji_decoder();
-        mapperRead = 1;
-        return ciramByte;
-    case 0xdd00:
-        kanji_decoder();
-        mapperRead = 1;
-        return qtramByte;
-    default:
-        mapperRead = 0;
-        return 0;
-    }
-}
-
-uint8_t retVal;
-uint8_t* vrc5_ppu_read_chr(uint16_t address) {
-    if(address & 0x1000) { //BG tile fetch
-        if(qtVal & 0x40) { //QTa Kanji CHR ROM
-            if(address & 0x08) {
-                retVal = (qtVal & 0x80) ? 0xff : 0x00;
-                return &retVal;
-            }
-            else
-                return &chrRom[((qtVal & 0x3f) << 12) | (address & 0xfff)];
-        }
-        else  //BG tile from external CHR RAM
-            return &chrRam[((qtVal & 0x01) << 12) | (address & 0xfff)];
-    }
-    else //Sprite tile from external CHR RAM
-        return &chrSlot[(address >> 10)][address & 0x3ff];
-}
-
-uint8_t* vrc5_ppu_read_nt(uint16_t address) {
-    if((address & 0x3ff) < 0x3c0) {//exclude reads from attribute table
-        qtVal = qtRam[(cart.mirroring ? (address & 0x400) : ((address & 0x800) >> 1)) | (address & 0x3ff)];
-    }
-    return &nameSlot[(address >> 10) & 3][address & 0x3ff];
-}
-
-void vrc5_ppu_write_nt(uint16_t address, uint8_t value) {
-    if(ntTarget) {
-        qtRam[(cart.mirroring ? (address & 0x400) : ((address & 0x800) >> 1)) | (address & 0x3ff)] = value;
-    }
-    else
-        nameSlot[(address >> 10) & 3][address & 0x3ff] = value;
-}
-
-static const uint8_t conv_tbl[4][8] = {
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-    { 0x00, 0x00, 0x40, 0x10, 0x28, 0x00, 0x18, 0x30 },
-    { 0x00, 0x00, 0x48, 0x18, 0x30, 0x08, 0x20, 0x38 },
-    { 0x00, 0x00, 0x80, 0x20, 0x38, 0x10, 0x28, 0xb0 }
-};
-
-void kanji_decoder() {
-    uint8_t tabl = conv_tbl[(vrc5_column >> 5) & 3][(vrc5_row & 0x7f) >> 4];
-    qtramByte = 0x40 | (tabl & 0x3f) | ((vrc5_row >> 1) & 7) | (vrc5_tileAttribute << 5);
-    ciramByte = ((vrc5_row & 0x01) << 7) | ((vrc5_column & 0x1f) << 2) | vrc5_tilePosition;
-    if(tabl & 0x40)
-        qtramByte &= 0xfb;
-    else if(tabl & 0x80)
-        qtramByte |= 0x04;
-}
-
-void vrc5_irq() {
-    if(vrc5_irqControl & 0x02) {
-        if(!vrc5_irqCounter) {
-            mapperInt = 1;
-            vrc5_irqCounter = vrc5_irqLatch;
-        }
-        else
-            vrc5_irqCounter++;
-    }
-}
 
 /////////////////////////////////////
 //              VRC 6              //
@@ -2705,148 +2380,136 @@ void init_mapper() {
     irq_cpu_clocked = &null_function;
     irq_ppu_clocked = &null_function;
     read_mapper_register = &read_null;
-    write_mapper_register4 = &write_null;
-    write_mapper_register6 = &write_null;
-    write_mapper_register8 = &write_null;
+    write_mapper_register = &write_null;
     if(!strcmp(cart.slot,"sxrom")   ||
             !strcmp(cart.slot,"sxrom_a") ||
             !strcmp(cart.slot,"sorom")   ||
             !strcmp(cart.slot,"sorom_a")) {
-        if ((cart.wramSize+cart.bwramSize) && (!strcmp(cart.mmc1_type,"MMC1A") ||
-                !strcmp(cart.mmc1_type,"MMC1B1")   ||
-                !strcmp(cart.mmc1_type,"MMC1B1-H") ||
-                !strcmp(cart.mmc1_type,"MMC1B2")   ||
-                !strcmp(cart.mmc1_type,"MMC1B3"))) {
+        if ((cart.wramSize+cart.bwramSize) && (!strcmp(cart.subtype,"MMC1A") ||
+                !strcmp(cart.subtype,"MMC1B1")   ||
+                !strcmp(cart.subtype,"MMC1B1-H") ||
+                !strcmp(cart.subtype,"MMC1B2")   ||
+                !strcmp(cart.subtype,"MMC1B3"))) {
             wramEnable = 1;
         }
-        write_mapper_register8 = &mapper_mmc1;
+        write_mapper_register = &mapper_mmc1;
     }
     else if(!strcmp(cart.slot,"uxrom") ||
             !strcmp(cart.slot,"un1rom") ||
             !strcmp(cart.slot,"unrom_cc")) {
-        write_mapper_register8 = &mapper_uxrom;
+        write_mapper_register = &mapper_uxrom;
     }
     else if (!strcmp(cart.slot,"cnrom")) {
-        write_mapper_register8 = &mapper_cnrom;
+        write_mapper_register = &mapper_cnrom;
     }
     else if (!strcmp(cart.slot,"axrom")) {
-        write_mapper_register8 = &mapper_axrom;
+        write_mapper_register = &mapper_axrom;
     }
     else if (!strcmp(cart.slot,"txrom") || !strcmp(cart.slot,"tqrom")
             || !strcmp(cart.slot,"txsrom")) {
-        write_mapper_register8 = &mapper_mmc3;
-        irq_ppu_clocked = &mmc3_irq;
-        memcpy(&mmc3ChrSource, &chrSource, sizeof(chrSource));
+        mmc3_reset();
     }
     else if (!strcmp(cart.slot,"vrc1")) {
-        write_mapper_register8 = &mapper_vrc1;
+        write_mapper_register = &mapper_vrc1;
     }
     else if (!strcmp(cart.slot,"vrc2") ||
             !strcmp(cart.slot,"vrc4")) {
-        write_mapper_register8 = &mapper_vrc24;
+        write_mapper_register = &mapper_vrc24;
         if (!strcmp(cart.slot,"vrc2") && (!cart.wramSize && !cart.bwramSize))
             wramBit = 1;
         irq_cpu_clocked = &vrc_irq;
     }
     else if (!strcmp(cart.slot,"vrc6")) {
-        write_mapper_register8 = &mapper_vrc6;
+        write_mapper_register = &mapper_vrc6;
         expansion_sound = &vrc6_sound;
         expSound = 1;
         irq_cpu_clocked = &vrc_irq;
     }
     else if (!strcmp(cart.slot,"g101")) {
-        write_mapper_register8 = &mapper_g101;
+        write_mapper_register = &mapper_g101;
     }
     else if (!strcmp(cart.slot,"lrog017")) {
-        write_mapper_register8 = &mapper_lrog017;
+        write_mapper_register = &mapper_lrog017;
         reset_lrog017();
     }
     else if (!strcmp(cart.slot,"holydivr")) {
-        write_mapper_register8 = &mapper_holydivr;
+        write_mapper_register = &mapper_holydivr;
     }
     else if (!strcmp(cart.slot,"jf16")) {
-        write_mapper_register8 = &mapper_jf16;
+        write_mapper_register = &mapper_jf16;
     }
     else if (!strcmp(cart.slot,"jf17") || !strcmp(cart.slot,"jf17pcm")) {
-        write_mapper_register8 = &mapper_jf17;
+        write_mapper_register = &mapper_jf17;
     }
     else if (!strcmp(cart.slot,"namcot_3433") || !strcmp(cart.slot,"namcot_3425")  || !strcmp(cart.slot,"namcot_3446")) {
-        write_mapper_register8 = &mapper_namcot34xx;
+        write_mapper_register = &mapper_namcot34xx;
     }
     else if (!strcmp(cart.slot,"discrete_74x377")) {
-        write_mapper_register8 = &mapper_74x377;
+        write_mapper_register = &mapper_74x377;
         reset_74x377();
     }
     else if (!strcmp(cart.slot,"cprom")) {
-        write_mapper_register8 = &mapper_cprom;
+        write_mapper_register = &mapper_cprom;
     }
     else if (!strcmp(cart.slot,"ss88006")) {
-        write_mapper_register8 = &mapper_ss88006;
+        write_mapper_register = &mapper_ss88006;
         irq_cpu_clocked = &ss88006_irq;
     }
     else if (!strcmp(cart.slot,"namcot_163")) {
-
-        write_mapper_register4 = &mapper_namco163;
-        write_mapper_register8 = &mapper_namco163;
+        write_mapper_register = &mapper_namco163;
         read_mapper_register = &namco163_read;
         irq_cpu_clocked = &namco163_irq;
     }
     else if (!strcmp(cart.slot,"tc0190fmc") || !strcmp(cart.slot,"tc0190fmcp")
             || !strcmp(cart.slot,"tc0350fmr")) {
-        write_mapper_register8 = &mapper_tc0190;
+        write_mapper_register = &mapper_tc0190;
         irq_ppu_clocked = &tc0190_irq;
     }
     else if (!strcmp(cart.slot,"bnrom")) {
-        write_mapper_register8 = &mapper_bnrom;
+        write_mapper_register = &mapper_bnrom;
     }
     else if (!strcmp(cart.slot,"nina001")) {
-        write_mapper_register6 = &mapper_nina1;
+        write_mapper_register = &mapper_nina1;
     }
     else if (!strcmp(cart.slot,"gxrom")) {
-        write_mapper_register8 = &mapper_gxrom;
+        write_mapper_register = &mapper_gxrom;
     }
     else if (!strcmp(cart.slot,"bitcorp_dis")) {
-        write_mapper_register6 = &mapper_bitcorp;
+        write_mapper_register = &mapper_bitcorp;
         reset_bitcorp();
     }
     else if (!strcmp(cart.slot,"h3001")) {
-        write_mapper_register8 = &mapper_h3001;
+        write_mapper_register = &mapper_h3001;
         reset_h3001();
         irq_cpu_clocked = &h3001_irq;
     }
     else if (!strcmp(cart.slot,"sunsoft3")) {
-        write_mapper_register8 = &mapper_sun3;
+        write_mapper_register = &mapper_sun3;
         irq_cpu_clocked = &sun3_irq;
     }
     else if (!strcmp(cart.slot,"sunsoft4")) {
-        write_mapper_register6 = &mapper_sun4;
-        write_mapper_register8 = &mapper_sun4;
+        write_mapper_register = &mapper_sun4;
     }
     else if (!strcmp(cart.slot,"sunsoft5a") ||
             !strcmp(cart.slot,"sunsoft5b") ||
             !strcmp(cart.slot,"sunsoft_fme7")) {
-        write_mapper_register8 = &mapper_sun5;
+        write_mapper_register = &mapper_sun5;
         irq_cpu_clocked = &sun5_irq;
     }
     else if (!strcmp(cart.slot,"bf9093") || !strcmp(cart.slot,"bf9096")) {
-        write_mapper_register8 = &mapper_bf909x;
+        write_mapper_register = &mapper_bf909x;
     }
     else if (!strcmp(cart.slot,"vrc3")) {
-        write_mapper_register8 = &mapper_vrc3;
+        write_mapper_register = &mapper_vrc3;
         irq_cpu_clocked = &vrc3_irq;
     }
     else if (!strcmp(cart.slot,"KONAMI-QTAI")) {
-        write_mapper_register8 = &mapper_vrc5;
-        read_mapper_register = &vrc5_read;
-        ppu_read_chr = &vrc5_ppu_read_chr;
-        ppu_read_nt = &vrc5_ppu_read_nt;
-        ppu_write_nt = &vrc5_ppu_write_nt;
-        irq_cpu_clocked = &vrc5_irq;
+        vrc5_reset();
     }
     else if (!strcmp(cart.slot,"nina006")) {
-        write_mapper_register4 = &mapper_nina36;
+        write_mapper_register = &mapper_nina36;
     }
     else if (!strcmp(cart.slot,"x1_005")) {
-        write_mapper_register6 = &mapper_x1005;
+        write_mapper_register = &mapper_x1005;
     }
 }

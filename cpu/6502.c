@@ -127,7 +127,7 @@ void run_6502() {
 	}
 	else {
 		intDelay = 0;
-		opcode = _6502_cpuread(cpuPC++);
+        opcode = _6502_cpuread(cpuPC++);
 		_6502_addcycles(ctable[opcode]);
 		(*addtable[opcode])();
 		(*optable[opcode])();
@@ -352,7 +352,7 @@ void branch() {
     uint8_t pageCross;
 	_6502_synchronize(1);
 	interrupt_polling();
-	uint_fast8_t reflag[4] = { 7, 6, 0, 1 };
+	uint8_t reflag[4] = { 7, 6, 0, 1 };
 	/* fetch operand */											/* cycle 2 */
 	if (((cpuP >> reflag[(opcode >> 6) & 3]) & 1) == ((opcode >> 5) & 1)) {
 		if (((cpuPC + 1) & 0xff00) != ((cpuPC + ((int8_t)_6502_cpuread(cpuPC) + 1)) & 0xff00)) {
@@ -370,10 +370,9 @@ void branch() {
 		/* fetch next opcode if branch taken, fix PCH */		/* cycle 4 (optional) */
 		/* fetch opcode if page boundary */						/* cycle 5 (optional) */
 		_6502_addcycles(1);
-		if (pageCross) /* special case, non-page crossing + branch taking ignores int. */
-		{
-		_6502_synchronize(1);
-		interrupt_polling();
+		if (pageCross) { /* special case, non-page crossing + branch taking ignores int. */
+		    _6502_synchronize(1);
+		    interrupt_polling();
 		}
 	} else
 		cpuPC++;													/* cycle 3 (no branch) */
@@ -886,7 +885,7 @@ void _6502_power_reset(reset_t rstFlag) {
 		apuStatus = 0; /* silence all channels */
 		noiseShift = 1;
 		dmcOutput = 0;
-		_6502_cycleCounter = 0;
+		_6502_M2 = 0;
 		dummywrite = 0; //used for mmc1; TODO: cleaner solution
 	    irqPulled = 0;
 	    nmiPulled = 0;
