@@ -73,6 +73,11 @@ void init_sdl(sdlSettings *settings) {
     if(TTF_Init()==-1) {
         printf("TTF_Init failed: %s\n", TTF_GetError());
         exit(EXIT_FAILURE);}
+    if(!defaultDir)
+        getcwd(workDir, sizeof(workDir));
+    else
+        strcpy(workDir, defaultDir);
+    add_slash(workDir);
 }
 
 void init_sdl_video(){
@@ -416,12 +421,6 @@ void create_menu(){	/* define menus */
 	fileList.type = CENTERED;
 	fileList.width = (currentSettings->window.winWidth >> 1);
 	fileList.margin = 0;
-
-	if(!defaultDir)
-		getcwd(workDir, sizeof(workDir));
-	else
-		strcpy(workDir, defaultDir);
-	add_slash(workDir);
 	currentMenu = &mainMenu;
 }
 

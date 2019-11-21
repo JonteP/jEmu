@@ -151,6 +151,15 @@ void nes_load_rom(char *rom) {
                 else
                     break;
             }
+        } else {
+            cart.prgSize = cart.chrSize = 32768;//just a hack
+            fseek(romFile,0,SEEK_SET);
+            free(prg);
+            prg = malloc(cart.prgSize * sizeof(uint8_t));
+            fread(prg, cart.prgSize, 1, romFile);
+            free(chrRom);
+            chrRom = malloc(cart.chrSize * sizeof(uint8_t));
+            fread(chrRom, cart.chrSize, 1, romFile);
         }
         if(!strcmp(cart.slot, "KONAMI-QTAI")) {
             cart.bwramSize = 8192;
@@ -184,11 +193,15 @@ void nes_load_rom(char *rom) {
     cart.pSlots = ((cart.prgSize) / 0x1000);
     cart.cSlots = ((cart.chrSize) / 0x400);
 
+    free(bwram);
+    free(wram);
+    bwram = NULL;
+    wram = NULL;
+    wramSource = wram;
     if (cart.bwramSize) {
         bwramName = strdup(rom);
         sprintf(bwramName+strlen(bwramName)-3,"sav");
         bwramFile = fopen(bwramName, "r");
-        free(bwram);
         bwram = malloc(cart.bwramSize * sizeof(uint8_t));
         if (bwramFile) {
             fread(bwram, cart.bwramSize, 1, bwramFile);
@@ -198,13 +211,13 @@ void nes_load_rom(char *rom) {
         wramEnable = 1;
     }
     if (cart.wramSize) {
-        free(wram);
         wram = malloc(cart.wramSize);
         wramSource = wram;
         wramEnable = 1;
     }
-    if(!(cart.bwramSize) && !(cart.wramSize))
+    if(!(cart.bwramSize) && !(cart.wramSize)) {
         wramEnable = 0;
+    }
     printf("PCB: %s (%s)\n",cart.pcb,cart.slot);
     printf("PRG size: %li bytes\n",cart.prgSize);
     printf("CHR size: %li bytes\n",cart.chrSize);

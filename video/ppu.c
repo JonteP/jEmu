@@ -6,14 +6,14 @@
  * TODO:
  * -remove dependencies
  * -proper ntsc/pal video simulation
- * -best fake palette?
  */
 
 #include "ppu.h"
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include "../nes/mapper.h" //CHR_RAM; chrSource; mapperInt
-#include "../my_sdl.h" //render_frame
 #include "../cpu/6502.h" //irqPulled
 #include "../nes/nescartridge.h" //cart
 
@@ -25,7 +25,7 @@ struct ppuDisplayMode  palMode = { 256, 240,  PAL_SCANLINES };
 static uint8_t vblank_period;
 static uint8_t nmiSuppressed;
 static uint8_t secOam[0x20];
-static uint32_t *ppuScreenBuffer = NULL;
+       uint32_t *ppuScreenBuffer = NULL;
 static uint8_t spriteBuffer[256], zeroBuffer[256], priorityBuffer[256], isSpriteZero = 0xff;
 
 //PPU internal registers
@@ -223,11 +223,10 @@ void run_ppu (uint16_t ntimes) {
 //RESET CLOCK COUNTER HERE...
         } else if (ppu_vCounter == 240 && ppudot == 0) {
             ppucc = 0;
+            ppu_drawFrame = 1;
         }
 //RENDERED LINES
         else if (ppu_vCounter < 240) {
-            if (!ppu_vCounter && !ppudot)
-                render_frame(ppuScreenBuffer);
             if (ppuMask & 0x18)	{
                 (*fetchGraphics[ppudot])();
                 (*spriteEvaluation[ppudot])();
@@ -368,11 +367,11 @@ void sfHT() {
     ppuOamAddress = 0;
     uint8_t flipX = ((sprite[2] >> 6) & 1);
     uint8_t nPalette = (sprite[2] & 3);
-	/* decode pattern data and store in buffer */
+//decode pattern data and store in buffer
     for(int pcol = 0; pcol < 8; pcol++) {
         uint8_t spritePixel = (7 - pcol - flipX * (7 - (pcol << 1)));
         uint8_t pixelData = (((spriteLow >> spritePixel) & 0x01) + (((spriteHigh >> spritePixel) & 0x01) << 1));
-        if(pixelData && (spriteBuffer[sprite[3] + pcol]) == 0xff && !(sprite[3] == 0xff)) {/* TODO: this PPU access probably should not be here, screws up mmc3 irq? */
+        if(pixelData && (spriteBuffer[sprite[3] + pcol]) == 0xff && !(sprite[3] == 0xff)) {
             spriteBuffer[sprite[3] + pcol] = *ppuread(0x3f10 + (nPalette << 2) + pixelData);
             if (isSpriteZero == cSprite) {
                 zeroBuffer[sprite[3] + pcol] = 1;
@@ -534,6 +533,7 @@ uint8_t read_ppu_register(uint16_t addr) {
             vbuff = tmpval8;
         }
         ppuV += (ppuController & 0x04) ? 32 : 1;
+        (void)*ppuread(ppuV);//another mmc3 hackish thing
         break;
     }
     return tmpval8;
@@ -600,6 +600,7 @@ void write_ppu_register(uint16_t addr, uint8_t tmpval8) {
             ppuData = tmpval8;
             ppuwrite((ppuV & 0x3fff), ppuData);
             ppuV += (ppuController & 0x04) ? 32 : 1;
+            (void)*ppuread(ppuV);//mmc3 hackish thing
             break;
         } else {
             vINC();
@@ -609,7 +610,7 @@ void write_ppu_register(uint16_t addr, uint8_t tmpval8) {
 }
 
 uint8_t * ppuread(uint16_t address) {
-    mmc3_ppu_read_chr(address);
+    //mmc3_ppu_read_chr(address);
     if (address < 0x2000) { //pattern tables
         return ppu_read_chr(address);
     } else if (address < 0x3f00) { //nametables

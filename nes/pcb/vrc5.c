@@ -3,6 +3,10 @@
 //            KONAMI-QT            //
 /////////////////////////////////////
 
+/* TODO:
+ * -alternative implementation of Kanji decoding at Nesdev...
+ * -the code only supports .unif format ROMs (their CHR data does not accurately represent actual ROM)
+ */
 #include "../mapper.h"
 #include "../../video/ppu.h"
 #include "../nescartridge.h"

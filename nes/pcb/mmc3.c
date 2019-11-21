@@ -3,35 +3,33 @@
 //              TxROM              //
 /////////////////////////////////////
 
-/* Emulates:
- *
- * TBROM
- * TEROM
- * TFROM
- * TGROM
- * TKROM
- * TK1ROM
- * TKSROM
- * TLROM
- * TL1ROM
- * TL2ROM
- * TLBROM
- * TLSROM
- * TNROM
- * TQROM    supports simultaneous CHR RAM and ROM
- * TR1ROM
- * TSROM
- * TVROM
+/* Emulates the following PCBs:
+
+Board   PRG ROM             PRG RAM             CHR                                                     Comments
+
+TBROM   64 KB                                   16 / 32 / 64 KB ROM
+TEROM   32 KB                                   16 / 32 / 64 KB ROM                                     Supports fixed mirroring
+TFROM   128 / 256 / 512 KB                      16 / 32 / 64 KB ROM                                     Supports fixed mirroring
+TGROM   128 / 256 / 512 KB                      8 KB RAM/ROM
+TKROM   128 / 256 / 512 KB  8 KB                128 / 256 KB ROM
+TK1ROM  128 KB              8 KB                128KB ROM                                               Uses 7432 for 28-pin CHR ROM
+TKSROM  128 / 256 / 512 KB  8 KB                128 KB ROM                                              Alternate mirroring control, Famicom only
+TLROM   128 / 256 / 512 KB                      128 / 256 KB ROM
+TL1ROM  128 KB                                  128 KB                                                  Uses 7432 for 28-pin CHR ROM
+TL2ROM                                                                                                  Nonstandard pinout
+TLBROM  128 KB                                  128 KB ROM                                              Uses 74541 to compensate for too-slow CHR ROM
+TLSROM  128 / 256 / 512 KB                      128 KB ROM                                              Alternate mirroring control
+TNROM   128 / 256, 512 KB   8 KB                8 KB RAM/ROM                                            Famicom only
+TQROM   128 KB                                  16 / 32 / 64 KB ROM + 8 KB RAM
+TR1ROM  128 / 256 / 512 KB                      64 KB ROM + 4 KB VRAM (4-screen Mirroring)              NES only
+TSROM   128 / 256 / 512 KB  8 KB (no battery)   128 / 256 KB ROM
+TVROM   64 KB                                   16 / 32 / 64 KB ROM + 4 KB VRAM (4-screen Mirroring)    NES only
  */
 
 
 /* TODO:
- * better A12 listening?
- * Support for mapper 47 etc.
- * IRQ issues:
- * -Ninja ryuukenden 2 - cut scenes
- * -Rockman3 - possible one-line glitch in weapons screen
- * -Rockman5 - slight glitch in gyromans elevators and level start screen
+ * Proper IRQ timing (see relevant test ROM; hacked in a delay for now)
+ * Support for mapper 47 etc. (many mmc3 derivatives exist)
  */
 
 #include "../mapper.h"
@@ -52,7 +50,6 @@ static uint16_t cromMask;
 static uint8_t bankSelect;
 static uint8_t bankRegister[0x08];
 static uint8_t irqEnable;
-static uint8_t pramProtect;
 static uint8_t irqLatch;
 static uint8_t irqReload;
 static uint8_t irqCounter;
@@ -67,11 +64,12 @@ static void     mmc3_chr_bank_switch();
 static void     mmc3_irq_old(void);
 static void     mmc3_irq_new(void);
 static void     (*mmc3_irq)(void);
+static uint8_t* mmc3_ppu_read_chr(uint16_t);
 
 
-void mmc3_reset() {
+void mmc3_reset() { //TODO: verify startup values
     write_mapper_register = &mmc3_register_write;
-    //ppu_read_chr = &mmc3_ppu_read_chr;
+    ppu_read_chr = &mmc3_ppu_read_chr;
     if(!strcmp(cart.subtype,"MMC3A"))//TODO: are some MMC3B using old behavior?
         mmc3_irq = &mmc3_irq_old;
     else
@@ -90,14 +88,13 @@ void mmc3_register_write (uint16_t address, uint8_t value) {
             bankSelect = value;
             mmc3_chr_bank_switch();
             mmc3_prg_bank_switch();
+
         } else { //Bank data (0x8001)
             int bank = (bankSelect & 0x07);
             bankRegister[bank] = value;
             if (bank < 6) {
-                if (!strcmp(cart.slot,"tqrom")) {
+                if (!strcmp(cart.slot,"tqrom"))
                     mmc3ChrSource[bank] = ((value & 0x40) ? CHR_RAM : CHR_ROM);
-                }
-                //printf("CHR bank: %02x\t%i\n",bankSelect,ppu_vCounter);
                 mmc3_chr_bank_switch();
             } else
                 mmc3_prg_bank_switch();
@@ -108,24 +105,29 @@ void mmc3_register_write (uint16_t address, uint8_t value) {
             cart.mirroring = 1 - (value & 0x01);
             nametable_mirroring(cart.mirroring);
         } else if (address % 2) { //PRG RAM protect (0xA001)
-            pramProtect = value;
+            if(wramSource != NULL) {
+                cpuMemory[0x6]->mask = ((value & 0x80) ? 0xfff : 0);
+                cpuMemory[0x6]->writable = ((value & 0x40) ? 0 : 1);
+                cpuMemory[0x6]->memory = ((value & 0x80) ? wramSource : &openBus);
+                cpuMemory[0x7]->mask = ((value & 0x80) ? 0xfff : 0);
+                cpuMemory[0x7]->writable = ((value & 0x40) ? 0 : 1);
+                cpuMemory[0x7]->memory = ((value & 0x80) ? wramSource + 0x1000 : &openBus);
+            }
         }
         break;
     case 0xc000:
         if (!(address % 2)) { //IRQ latch (0xC000)
             irqLatch = value;
-            //printf("IRQ latch(%i): %i\t%i\n",irqLatch,ppu_vCounter,frame);
-        } else if (address % 2) { //IRQ reload (0xC001)
+        } else { //IRQ reload (0xC001)
             irqReload = 1;
             irqCounter = 0;
         }
         break;
     case 0xe000:
         if (!(address % 2)) { //IRQ disable and acknowledge (0xe000)
-            //printf("IRQ ack: %i\t%i\n",ppu_vCounter,frame);
             irqEnable = 0;
             mapperInt = 0;
-        } else if (address % 2) { //IRQ enable (0xe001)
+        } else { //IRQ enable (0xe001)
             irqEnable = 1;
         }
         break;
@@ -205,10 +207,13 @@ void mmc3_chr_bank_switch() {
 }
 
 //TODO: should mmc3 be clocked on ppu writes as well?
-// && ((ppucc - lastCycle) >= 6)
-//
-void mmc3_ppu_read_chr(uint16_t address) {
+uint8_t irqNext = 0;
+uint8_t* mmc3_ppu_read_chr(uint16_t address) {
     if(address < 0x3f00) {
+        if(irqNext) {
+            irqNext = 0;
+            mmc3_irq();
+        }
     if((address ^ lastAddress) & 0x1000) { //A12 change
        if(address & 0x1000) { //rising edge
            if(lastCycle > ppucc)
@@ -216,14 +221,15 @@ void mmc3_ppu_read_chr(uint16_t address) {
            else
                   downCycles = (ppucc - lastCycle);
            if(downCycles >= 6)
-               mmc3_irq();
+               irqNext = 1;//TODO: hacked in a delay for rockman 5
+               //mmc3_irq();
        }
        else if(!(address & 0x1000)) //falling edge
            lastCycle = ppucc;
     }
     lastAddress = address;
-  //  return &chrSlot[(address >> 10)][address & 0x3ff];
     }
+    return &chrSlot[(address >> 10)][address & 0x3ff];
 }
 
 void mmc3_irq_old() {
@@ -238,15 +244,11 @@ void mmc3_irq_old() {
 }
 
 void mmc3_irq_new() {
-    if(!irqCounter || irqReload) {
+    if(!irqCounter || irqReload)
         irqCounter = irqLatch;
-        //printf("IRQ reload (%i): %i\t%i\n",irqLatch,ppu_vCounter,frame);
-    }
     else
         irqCounter--;
-    if(!irqCounter && irqEnable) {
+    if(!irqCounter && irqEnable)
         mapperInt = 1;
-        //printf("IRQ set: %i\t%i\n",ppu_vCounter,frame);
-    }
     irqReload = 0;
 }

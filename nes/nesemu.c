@@ -115,7 +115,7 @@ int nesemu() {
     player1_buttonSelect = &nes_p1select;
 
     strcpy(currentMachine->cartFile,
-            "/home/jonas/git/roms/nes/mmc3/ninja2.nes");
+            "/home/jonas/git/roms/nes/mmc1/metroid.nes");
 
     nes_reset_emulation();
 
@@ -503,6 +503,10 @@ void nes_6502_synchronize(int x) {
     ppu_wait = (x * ppuClockRatio);
     apu_wait = x;
     fds_wait = x;
+    if (ppu_drawFrame) {
+        ppu_drawFrame = 0;
+        render_frame(ppuScreenBuffer);
+    }
 }
 
 //Controller functions

@@ -18,8 +18,7 @@ uint8_t mapperRead;
 
 extern chrtype_t chrSource[0x8];
 void vrc5_reset();
+void mmc1_reset();
 void mmc3_reset();
-void toggle_a12(uint16_t);
-void mmc3_ppu_read_chr(uint16_t);
 
 #endif

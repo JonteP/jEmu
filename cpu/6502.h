@@ -14,7 +14,6 @@ typedef enum {
 	NONE = 0
 } reset_t;
 
-uint8_t  dummywrite; //used for mmc1; TODO: cleaner solution
 uint8_t  irqPulled;
 uint8_t  nmiPulled;
 uint32_t _6502_M2;

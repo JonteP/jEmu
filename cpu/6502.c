@@ -322,9 +322,7 @@ void asl() {
 	bitset(&cpuP, tmp8 >= 0x80, 7);
 	_6502_synchronize(1);
 	interrupt_polling();
-	dummywrite = 1;
 	_6502_cpuwrite(address,tmp8);								/* cycle 6 */
-	dummywrite = 0;
 }
 
 void asli() {
@@ -450,9 +448,7 @@ void dec() {
 	bitset(&cpuP, tmp8 >= 0x80, 7);
 	_6502_synchronize(1);
 	interrupt_polling();
-	dummywrite = 1;
 	_6502_cpuwrite(address, tmp8);									/* cycle 6 */
-	dummywrite = 0;
 }
 
 void dex() {
@@ -491,9 +487,7 @@ void inc() {
 	bitset(&cpuP, tmp8 >= 0x80, 7);
 	_6502_synchronize(1);
 	interrupt_polling();
-	dummywrite = 1;
 	_6502_cpuwrite(address, tmp8);					/* cycle 6 */
-	dummywrite = 0;
 }
 
 void inx() {
@@ -581,9 +575,7 @@ void lsr() {
 	bitset(&cpuP, tmp8 >= 0x80, 7);
 	_6502_synchronize(1);
 	interrupt_polling();
-	dummywrite = 1;
 	_6502_cpuwrite(address,tmp8);				/* cycle 6 */
-	dummywrite = 0;
 }
 
 void lsri() {
@@ -661,9 +653,7 @@ void rol() {
 	bitset(&cpuP, tmp8 >= 0x80, 7);
 	_6502_synchronize(1);
 	interrupt_polling();
-	dummywrite = 1;
 	_6502_cpuwrite(address,tmp8);				/* cycle 6 */
-	dummywrite = 0;
 }
 
 void roli() {
@@ -692,9 +682,7 @@ void ror() {
 	bitset(&cpuP, tmp8 >= 0x80, 7);
 	_6502_synchronize(1);
 	interrupt_polling();
-	dummywrite = 1;
 	_6502_cpuwrite(address,tmp8);						/* cycle 6 */
-	dummywrite = 0;
 }
 
 void rori() {
@@ -886,7 +874,6 @@ void _6502_power_reset(reset_t rstFlag) {
 		noiseShift = 1;
 		dmcOutput = 0;
 		_6502_M2 = 0;
-		dummywrite = 0; //used for mmc1; TODO: cleaner solution
 	    irqPulled = 0;
 	    nmiPulled = 0;
 	    irqPending = 0;
