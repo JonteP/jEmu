@@ -4,7 +4,7 @@
 /////////////////////////////////////
 
 /* Emulates the following PCBs:
- *
+
 Board    PRG ROM             PRG RAM  CHR                  Comments
 
 SAROM    64 KB               8 KB     16 / 32 / 64 KB ROM  NES only

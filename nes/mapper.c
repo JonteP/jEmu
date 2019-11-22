@@ -2248,6 +2248,9 @@ void init_mapper() {
     else if (!strcmp(cart.slot,"pxrom")) {
         mmc2_reset();
     }
+    else if (!strcmp(cart.slot,"fxrom")) {
+        mmc4_reset();
+    }
     else if (!strcmp(cart.slot,"txrom") || !strcmp(cart.slot,"tqrom")
             || !strcmp(cart.slot,"txsrom")) {
         mmc3_reset();
