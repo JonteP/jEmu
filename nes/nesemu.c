@@ -115,7 +115,7 @@ int nesemu() {
     player1_buttonSelect = &nes_p1select;
 
     strcpy(currentMachine->cartFile,
-            "/home/jonas/git/roms/nes/mmc1/metroid.nes");
+            "/home/jonas/git/roms/nes/mmc2/Mike Tyson's Punch-Out!! (Japan, USA).nes");
 
     nes_reset_emulation();
 

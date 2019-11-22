@@ -19,6 +19,7 @@ uint8_t mapperRead;
 extern chrtype_t chrSource[0x8];
 void vrc5_reset();
 void mmc1_reset();
+void mmc2_reset();
 void mmc3_reset();
 
 #endif

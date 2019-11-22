@@ -21,8 +21,8 @@ int main() {
     settings.window.screenWidth = 800;
 	settings.window.screenHeight = 600;
 	settings.window.visible = 1;
-    settings.window.winWidth = 640;
-	settings.window.winHeight = 480;
+    settings.window.winWidth = 320;
+	settings.window.winHeight = 240;
 	settings.window.winXPosition = 100;
 	settings.window.winYPosition = 100;
 	settings.window.xClip = 0;

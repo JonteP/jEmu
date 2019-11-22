@@ -98,6 +98,9 @@ void mmc1_reset() { //TODO: verify startup values
             prgRamMask = 0x08;
             prgRamShift = 10;
         }
+    } else {
+        prgRamMask = 0;
+        prgRamShift = 0;
     }
     lastCycle = 0;
     chrMask4 = cart.chrSize ? ((cart.chrSize >> 12) - 1) : ((cart.cramSize >> 12) - 1);

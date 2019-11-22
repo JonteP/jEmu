@@ -1,10 +1,9 @@
 /* TODO:
  * Unemulated mappers
- * -Nintendo MMC2
- *           MMC3 derivatives (#12, #14, #44, #45, #47, #49, #52...)
+ * -Nintendo MMC3 derivatives (#12, #14, #44, #45, #47, #49, #52...)
  *           MMC4
  *           MMC5
- *           NES-EVENT
+ *           NES-EVENT (mmc1)
  *           multicarts
  * -Bandai anything (#16, #70, #152, #153, #157, #159, #188...)
  * -Konami VRC4 derivatives (#27...)
@@ -2246,6 +2245,13 @@ void init_mapper() {
             !strcmp(cart.slot,"sorom_a")) {
         mmc1_reset();
     }
+    else if (!strcmp(cart.slot,"pxrom")) {
+        mmc2_reset();
+    }
+    else if (!strcmp(cart.slot,"txrom") || !strcmp(cart.slot,"tqrom")
+            || !strcmp(cart.slot,"txsrom")) {
+        mmc3_reset();
+    }
     else if(!strcmp(cart.slot,"uxrom") ||
             !strcmp(cart.slot,"un1rom") ||
             !strcmp(cart.slot,"unrom_cc")) {
@@ -2256,10 +2262,6 @@ void init_mapper() {
     }
     else if (!strcmp(cart.slot,"axrom")) {
         write_mapper_register = &mapper_axrom;
-    }
-    else if (!strcmp(cart.slot,"txrom") || !strcmp(cart.slot,"tqrom")
-            || !strcmp(cart.slot,"txsrom")) {
-        mmc3_reset();
     }
     else if (!strcmp(cart.slot,"vrc1")) {
         write_mapper_register = &mapper_vrc1;
